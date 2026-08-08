@@ -1,5 +1,6 @@
 """Post-write validation: the safety net behind direct Write."""
 
+import hashlib
 import json
 import re
 from dataclasses import dataclass, field
@@ -89,6 +90,43 @@ def _check_raw(vault: Path, rel: str) -> list[str]:
     return []
 
 
+def _log_state_path(vault: Path) -> Path:
+    return vault / ".vault-meta" / "log-state.json"
+
+
+def _body_of(text: str) -> bytes:
+    _, body = frontmatter.split(text)
+    return body.encode("utf-8")
+
+
+def update_log_state(vault: Path, text: str) -> None:
+    body = _body_of(text)
+    p = _log_state_path(vault)
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_text(
+        json.dumps({"length": len(body), "sha256": hashlib.sha256(body).hexdigest()}),
+        encoding="utf-8",
+    )
+
+
+def check_log(vault: Path, text: str, by_brain: bool) -> list[str]:
+    sp = _log_state_path(vault)
+    if by_brain or not sp.exists():
+        update_log_state(vault, text)
+        return []
+    try:
+        state = json.loads(sp.read_text(encoding="utf-8"))
+        old_len, old_hash = int(state["length"]), state["sha256"]
+    except (OSError, json.JSONDecodeError, KeyError, ValueError):
+        update_log_state(vault, text)
+        return []
+    body = _body_of(text)
+    if len(body) >= old_len and hashlib.sha256(body[-old_len:]).hexdigest() == old_hash:
+        update_log_state(vault, text)
+        return []
+    return ["wiki/log.md is append-at-top only: existing entries were edited or removed; restore them and prepend the new entry"]
+
+
 def validate_file(vault: Path, path: Path, by_brain: bool = False) -> Report:
     r = Report()
     try:
@@ -110,7 +148,8 @@ def validate_file(vault: Path, path: Path, by_brain: bool = False) -> Report:
         r.errors += check_hot(text)
         return r
     if name == "log.md":
-        return r  # Task 7 adds the append-at-top check here
+        r.errors += check_log(vault, text, by_brain)
+        return r
     block, _ = frontmatter.split(text)
     if block is None:
         r.errors.append(f"no frontmatter in {rel}")
