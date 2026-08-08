@@ -112,6 +112,16 @@ def main(argv: list[str] | None = None) -> int:
                 out.parent.mkdir(parents=True, exist_ok=True)
                 out.write_text(lint_mod.report_markdown(findings), encoding="utf-8")
             return 1 if any(f.severity == "error" for f in findings) else 0
+        if args.command == "fold":
+            from . import fold as fold_mod
+            vault = config.vault_path(args.vault)
+            fp = fold_mod.plan(vault)
+            if args.apply:
+                print(fold_mod.apply(vault, fp))
+            else:
+                print(fp.summary())
+                print("dry-run; use 'brain fold --apply' to execute")
+            return 0
     except config.ConfigError as e:
         print(f"config: {e}", file=sys.stderr)
         return 2
