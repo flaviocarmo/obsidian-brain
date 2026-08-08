@@ -60,3 +60,30 @@ def test_write_report(vault, monkeypatch):
     report = vault / "wiki/meta/lint-report.md"
     assert report.exists()
     assert report.read_text(encoding="utf-8").startswith("---")
+
+
+def test_write_report_does_not_self_pollute(vault, monkeypatch):
+    index.compile(vault)
+    monkeypatch.setenv("BRAIN_VAULT", str(vault))
+    # First write
+    cli.main(["lint", "--write"])
+    # Second lint should not report index staleness or count mismatch caused by lint-report.md
+    findings = lint.run(vault)
+    staleness_warnings = [f for f in _sev(findings, "warning") if "older than newest page" in f.message]
+    count_warnings = [f for f in _sev(findings, "warning") if "index lists" in f.message]
+    assert len(staleness_warnings) == 0
+    assert len(count_warnings) == 0
+
+
+def test_write_report_creates_meta_directory(vault, monkeypatch):
+    index.compile(vault)
+    # Remove meta directory to test mkdir
+    import shutil
+    meta_dir = vault / "wiki/meta"
+    shutil.rmtree(meta_dir)
+    assert not meta_dir.exists()
+    monkeypatch.setenv("BRAIN_VAULT", str(vault))
+    cli.main(["lint", "--write"])
+    report = vault / "wiki/meta/lint-report.md"
+    assert report.exists()
+    assert report.read_text(encoding="utf-8").startswith("---")

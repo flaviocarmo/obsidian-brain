@@ -29,7 +29,7 @@ def _pages(vault: Path) -> list[Path]:
         rel = p.relative_to(wiki)
         if rel.name in {"index.md", "hot.md", "log.md"} and len(rel.parts) == 1:
             continue
-        if rel.parts[0] == "folds":
+        if rel.parts[0] in {"folds", "meta"}:
             continue
         out.append(p)
     return out
@@ -77,7 +77,7 @@ def run(vault: Path) -> list[Finding]:
 
     for p in pages:
         rel_parts = p.relative_to(wiki).parts
-        if rel_parts[0] in {"meta",} or len(rel_parts) == 1:
+        if len(rel_parts) == 1:
             continue
         if p.stem.casefold() not in inbound:
             findings.append(Finding("info", p.relative_to(vault).as_posix(), f"orphan page: {p.stem} has no inbound links"))

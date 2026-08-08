@@ -109,6 +109,7 @@ def main(argv: list[str] | None = None) -> int:
                 print(f"{len(findings)} findings")
             if args.write:
                 out = vault / "wiki" / "meta" / "lint-report.md"
+                out.parent.mkdir(parents=True, exist_ok=True)
                 out.write_text(lint_mod.report_markdown(findings), encoding="utf-8")
             return 1 if any(f.severity == "error" for f in findings) else 0
     except config.ConfigError as e:
