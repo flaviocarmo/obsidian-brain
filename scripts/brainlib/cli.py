@@ -83,6 +83,19 @@ def main(argv: list[str] | None = None) -> int:
             for e in report.errors:
                 print(f"ERROR: {e}")
             return 0 if report.ok else 1
+        if args.command == "compile-index":
+            from . import index as index_mod
+            print(index_mod.compile(config.vault_path(args.vault)))
+            return 0
+        if args.command == "hot-check":
+            from . import validate as validate_mod
+            hot = config.vault_path(args.vault) / "wiki" / "hot.md"
+            errors = validate_mod.check_hot(hot.read_text(encoding="utf-8")) if hot.exists() else []
+            for e in errors:
+                print(f"ERROR: {e}")
+            if not errors:
+                print("hot.md ok")
+            return 0 if not errors else 1
     except config.ConfigError as e:
         print(f"config: {e}", file=sys.stderr)
         return 2
