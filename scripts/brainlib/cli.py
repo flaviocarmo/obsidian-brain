@@ -96,6 +96,21 @@ def main(argv: list[str] | None = None) -> int:
             if not errors:
                 print("hot.md ok")
             return 0 if not errors else 1
+        if args.command == "lint":
+            import json as jsonlib
+            from . import lint as lint_mod
+            vault = config.vault_path(args.vault)
+            findings = lint_mod.run(vault)
+            if args.json:
+                print(jsonlib.dumps([f.to_dict() for f in findings], ensure_ascii=True, indent=1))
+            else:
+                for f in findings:
+                    print(f"{f.severity.upper()}: {f.path}: {f.message}")
+                print(f"{len(findings)} findings")
+            if args.write:
+                out = vault / "wiki" / "meta" / "lint-report.md"
+                out.write_text(lint_mod.report_markdown(findings), encoding="utf-8")
+            return 1 if any(f.severity == "error" for f in findings) else 0
     except config.ConfigError as e:
         print(f"config: {e}", file=sys.stderr)
         return 2
