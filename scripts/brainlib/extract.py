@@ -70,10 +70,7 @@ def resolve_page(vault: Path, ident: str) -> Path:
     exact = [p for p in pages if _fold(p.stem) == wanted]
     if len(exact) == 1:
         return exact[0]
-    prefix = [p for p in pages if _fold(p.stem).startswith(wanted)]
-    if len(prefix) == 1:
-        return prefix[0]
-    # last chance: permalink in frontmatter
+    # check permalink in frontmatter before prefix match
     for p in pages:
         try:
             meta, _ = frontmatter.load(p)
@@ -81,6 +78,9 @@ def resolve_page(vault: Path, ident: str) -> Path:
             continue
         if _fold(str(meta.get("permalink", ""))) == wanted:
             return p
+    prefix = [p for p in pages if _fold(p.stem).startswith(wanted)]
+    if len(prefix) == 1:
+        return prefix[0]
     pool = exact or prefix
     if pool:
         names = ", ".join(sorted(p.stem for p in pool)[:8])

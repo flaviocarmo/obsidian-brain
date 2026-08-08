@@ -41,3 +41,21 @@ def test_resolve_missing_raises(vault):
 def test_big_page_estimate():
     body = "# T\n" + ("## S\n" + "x" * 400 + "\n") * 700  # ~280KB
     assert extract.estimate_tokens(body) > 8000
+
+
+def test_resolve_permalink_beats_prefix(vault):
+    """Permalink match should win over accidental prefix match."""
+    wiki = vault / "wiki"
+    # Create a page with permalink: abc
+    (wiki / "sources/Permalink ABC.md").write_text(
+        "---\ntype: source\ntitle: \"Permalink ABC\"\npermalink: abc\ncreated: 2026-05-01\nupdated: 2026-06-01\n---\n\nBody.\n",
+        encoding="utf-8",
+    )
+    # Create another page whose stem starts with "abc"
+    (wiki / "sources/Abcdef Page.md").write_text(
+        "---\ntype: source\ntitle: \"Abcdef Page\"\ncreated: 2026-05-01\nupdated: 2026-06-01\n---\n\nBody.\n",
+        encoding="utf-8",
+    )
+    # Resolve by "abc" should return the one with permalink, not the prefix match
+    p = extract.resolve_page(vault, "abc")
+    assert p.name == "Permalink ABC.md"
