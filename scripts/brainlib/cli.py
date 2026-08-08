@@ -3,16 +3,61 @@
 import argparse
 import sys
 
-COMMANDS = ("extract", "validate", "lint", "compile-index", "hot-check", "fold")
+from . import config, extract
+
+FULL_PAGE_TOKEN_LIMIT = 8000
 
 
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="brain", description="obsidian-brain CLI")
-    p.add_argument("--vault", help="override vault path (else BRAIN_VAULT or ~/.claude/brain.json)")
+    p.add_argument("--vault")
     sub = p.add_subparsers(dest="command")
-    for name in COMMANDS:
-        sub.add_parser(name)
+
+    ext = sub.add_parser("extract")
+    ext.add_argument("page")
+    ext.add_argument("--heading")
+    ext.add_argument("--toc", action="store_true")
+    ext.add_argument("--level", type=int, default=None)
+
+    sub.add_parser("validate").add_argument("file")
+    lint = sub.add_parser("lint")
+    lint.add_argument("--json", action="store_true")
+    lint.add_argument("--write", action="store_true")
+    sub.add_parser("compile-index")
+    sub.add_parser("hot-check")
+    fold = sub.add_parser("fold")
+    fold.add_argument("--apply", action="store_true")
     return p
+
+
+def _cmd_extract(args) -> int:
+    vault = config.vault_path(args.vault)
+    try:
+        path = extract.resolve_page(vault, args.page)
+    except extract.ExtractError as e:
+        print(f"extract: {e}", file=sys.stderr)
+        return 1
+    text = path.read_text(encoding="utf-8")
+    if args.heading:
+        parts = extract.get_sections(text, args.heading)
+        if not parts:
+            print(f"extract: heading not found: {args.heading!r}", file=sys.stderr)
+            return 1
+        print(f"\n{'-' * 8}\n".join(parts))
+        return 0
+    sections = extract.toc(text)
+    if args.level:
+        sections = [s for s in sections if s.level <= args.level]
+    if args.toc or extract.estimate_tokens(text) >= FULL_PAGE_TOKEN_LIMIT:
+        rel = path.as_posix()
+        print(f"# TOC: {path.stem} ({extract.estimate_tokens(text)} tokens estimados)")
+        for s in sections:
+            print(f"{'  ' * (s.level - 1)}- {s.title} (~{s.tokens} tokens)")
+        if not args.toc:
+            print(f"\nPagina grande. Use: brain extract \"{path.stem}\" --heading \"<titulo>\"")
+        return 0
+    print(text)
+    return 0
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -20,13 +65,17 @@ def main(argv: list[str] | None = None) -> int:
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")
         sys.stderr.reconfigure(encoding="utf-8", errors="replace")
     try:
-        args, _rest = build_parser().parse_known_args(argv)
+        args = build_parser().parse_args(argv)
     except SystemExit:
         return 2
-    if not args.command:
-        print("usage: brain <command>; commands: " + ", ".join(COMMANDS), file=sys.stderr)
+    try:
+        if args.command == "extract":
+            return _cmd_extract(args)
+    except config.ConfigError as e:
+        print(f"config: {e}", file=sys.stderr)
         return 2
-    if args.command not in COMMANDS:
+    if not args.command:
+        print("usage: brain <command>", file=sys.stderr)
         return 2
     print(f"{args.command}: not implemented yet", file=sys.stderr)
     return 2
