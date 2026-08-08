@@ -2,6 +2,7 @@
 
 import argparse
 import sys
+from pathlib import Path
 
 from . import config, extract
 
@@ -19,7 +20,9 @@ def build_parser() -> argparse.ArgumentParser:
     ext.add_argument("--toc", action="store_true")
     ext.add_argument("--level", type=int, default=None)
 
-    sub.add_parser("validate").add_argument("file")
+    val = sub.add_parser("validate")
+    val.add_argument("file")
+    val.add_argument("--by-brain", action="store_true")
     lint = sub.add_parser("lint")
     lint.add_argument("--json", action="store_true")
     lint.add_argument("--write", action="store_true")
@@ -71,6 +74,15 @@ def main(argv: list[str] | None = None) -> int:
     try:
         if args.command == "extract":
             return _cmd_extract(args)
+        if args.command == "validate":
+            from . import validate as validate_mod
+            vault = config.vault_path(args.vault)
+            report = validate_mod.validate_file(vault, Path(args.file), by_brain=args.by_brain)
+            for w in report.warnings:
+                print(f"WARN: {w}")
+            for e in report.errors:
+                print(f"ERROR: {e}")
+            return 0 if report.ok else 1
     except config.ConfigError as e:
         print(f"config: {e}", file=sys.stderr)
         return 2
