@@ -16,6 +16,8 @@ REQUIRED_KEYS = ("type", "title", "created", "updated", "tags", "status")
 HOT_WORD_LIMIT = 500
 _DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 _ANTERIOR = re.compile(r"anterior", re.IGNORECASE)
+_H_DATE_BR = re.compile(r"(\d{2})/(\d{2})/(\d{4})")
+_H_DATE_ISO = re.compile(r"(\d{4})-(\d{2})-(\d{2})")
 
 
 @dataclass
@@ -67,6 +69,39 @@ def check_hot(text: str) -> list[str]:
         if line.startswith("#") and _ANTERIOR.search(line):
             errors.append(f"hot.md has an 'anterior' section: {line.strip()!r}; overwrite the whole file")
     return errors
+
+
+def _heading_date(line: str) -> date | None:
+    m = _H_DATE_ISO.search(line)
+    if m:
+        try:
+            return date(int(m.group(1)), int(m.group(2)), int(m.group(3)))
+        except ValueError:
+            return None
+    m = _H_DATE_BR.search(line)
+    if m:
+        try:
+            return date(int(m.group(3)), int(m.group(2)), int(m.group(1)))
+        except ValueError:
+            return None
+    return None
+
+
+def check_ledger_chronology(text: str) -> list[str]:
+    last: date | None = None
+    for line in text.splitlines():
+        if not line.startswith(("## ", "### ")):
+            continue
+        d = _heading_date(line)
+        if d is None:
+            continue
+        if last is not None and d < last:
+            return [
+                f"ledger chronology: {line.strip()!r} ({d}) comes after a newer entry ({last}); "
+                "insert records in chronological position, do not blind-append"
+            ]
+        last = d
+    return []
 
 
 def _raw_manifest_path(vault: Path) -> Path:
@@ -162,4 +197,6 @@ def validate_file(vault: Path, path: Path, by_brain: bool = False) -> Report:
     if name.startswith("folds/"):
         return r  # archives: parseable is enough
     r.errors += check_schema(meta)
+    if name.startswith("areas/"):
+        r.warnings += check_ledger_chronology(text)
     return r
