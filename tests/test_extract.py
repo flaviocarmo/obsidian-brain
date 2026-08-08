@@ -43,6 +43,32 @@ def test_big_page_estimate():
     assert extract.estimate_tokens(body) > 8000
 
 
+def test_toc_ignores_headings_inside_fence():
+    text = "# T\n\n## Passos\n\n```bash\n# fake heading\n```\n\ntexto\n"
+    sections = extract.toc(text)
+    assert [s.title for s in sections] == ["T", "Passos"]
+
+
+def test_get_section_survives_fenced_comments():
+    """A ``` fence containing "# comment" lines used to be misread as a
+    level-1 heading, truncating the section right at the fence."""
+    text = (
+        "# Titulo\n\n"
+        "## Passos\n\n"
+        "Antes.\n\n"
+        "```bash\n"
+        "# comment inside fence\n"
+        "echo hi\n"
+        "```\n\n"
+        "Depois do fence.\n\n"
+        "## Proxima Secao\n\nOutro conteudo.\n"
+    )
+    parts = extract.get_sections(text, "Passos")
+    assert len(parts) == 1
+    assert "Depois do fence." in parts[0]
+    assert "Proxima Secao" not in parts[0]
+
+
 def test_resolve_permalink_beats_prefix(vault):
     """Permalink match should win over accidental prefix match."""
     wiki = vault / "wiki"

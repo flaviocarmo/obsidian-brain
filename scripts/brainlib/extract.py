@@ -8,6 +8,7 @@ from pathlib import Path
 from . import frontmatter
 
 _HEADING = re.compile(r"^(#{1,6})\s+(.*)$")
+_FENCE = re.compile(r"^(```|~~~)")
 
 
 class ExtractError(Exception):
@@ -33,13 +34,29 @@ def _fold(s: str) -> str:
     return "".join(c for c in nfkd if not unicodedata.combining(c)).casefold().strip()
 
 
-def toc(text: str) -> list[Section]:
-    lines = text.splitlines()
+def iter_headings(text: str) -> list[tuple[int, int, str]]:
+    """(line_index, level, title) for each heading, skipping fenced code blocks.
+
+    ``# comment`` lines inside ``` or ~~~ fences must not be mistaken for
+    Markdown headings.
+    """
     heads: list[tuple[int, int, str]] = []
-    for i, line in enumerate(lines):
+    in_fence = False
+    for i, line in enumerate(text.splitlines()):
+        if _FENCE.match(line.strip()):
+            in_fence = not in_fence
+            continue
+        if in_fence:
+            continue
         m = _HEADING.match(line)
         if m:
             heads.append((i, len(m.group(1)), m.group(2).strip()))
+    return heads
+
+
+def toc(text: str) -> list[Section]:
+    lines = text.splitlines()
+    heads = iter_headings(text)
     sections = []
     for idx, (start, level, title) in enumerate(heads):
         end = len(lines)

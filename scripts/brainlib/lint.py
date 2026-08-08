@@ -5,10 +5,9 @@ from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
 
-from . import frontmatter, validate
+from . import extract, frontmatter, validate
 
 _WIKILINK = re.compile(r"\[\[([^\]\|#]+)")
-_HEADING = re.compile(r"^(#{1,6})\s+(.*)$")
 _STALE = re.compile(r"\[!stale\]", re.IGNORECASE)
 
 
@@ -64,7 +63,7 @@ def run(vault: Path) -> list[Finding]:
                 findings.append(Finding("warning", rel, f"dead wikilink: [[{target.strip()}]]"))
 
         lines = body.splitlines()
-        heads = [(i, len(m.group(1)), m.group(2)) for i, l in enumerate(lines) if (m := _HEADING.match(l))]
+        heads = extract.iter_headings(body)
         for idx, (i, level, title) in enumerate(heads):
             nxt = heads[idx + 1][0] if idx + 1 < len(heads) else len(lines)
             if not any(l.strip() for l in lines[i + 1:nxt]):

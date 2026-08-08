@@ -38,6 +38,19 @@ def test_empty_section_detected(vault):
     assert any("Secao Vazia" in f.message for f in findings)
 
 
+def test_empty_section_not_flagged_across_fence(vault):
+    p = vault / "wiki/concepts/ComFence.md"
+    p.write_text(
+        "---\ntype: concept\ntitle: \"ComFence\"\ncreated: 2026-01-01\nupdated: 2026-01-01\n"
+        "tags: []\nstatus: seed\n---\n\n# ComFence\n\n## Passos\n\n"
+        "```bash\n# comentario\necho oi\n```\n\ntexto final\n",
+        encoding="utf-8",
+    )
+    index.compile(vault)
+    findings = lint.run(vault)
+    assert not any("Passos" in f.message for f in findings)
+
+
 def test_bad_schema_is_error_and_exit_1(vault, monkeypatch):
     (vault / "wiki/sources/Quebrada.md").write_text("---\ntype: banana\n---\nx\n", encoding="utf-8")
     index.compile(vault)
