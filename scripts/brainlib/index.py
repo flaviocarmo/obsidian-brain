@@ -7,7 +7,7 @@ from pathlib import Path
 from . import frontmatter
 
 SKIP_FILES = {"index.md", "hot.md", "log.md"}
-SKIP_DIRS = {"folds"}
+SKIP_DIRS = {"folds", "meta"}
 
 
 def compile(vault: Path) -> str:

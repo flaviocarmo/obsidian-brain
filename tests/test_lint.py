@@ -51,6 +51,18 @@ def test_empty_section_not_flagged_across_fence(vault):
     assert not any("Passos" in f.message for f in findings)
 
 
+def test_recompile_after_lint_write_matches_page_count(vault, monkeypatch):
+    """wiki/meta/ holds generated reports, not content pages: index must skip
+    it like lint._pages() already does, or the two disagree forever."""
+    monkeypatch.setenv("BRAIN_VAULT", str(vault))
+    index.compile(vault)
+    cli.main(["lint", "--write"])  # creates wiki/meta/lint-report.md
+    index.compile(vault)  # recompile AFTER the report exists
+    findings = lint.run(vault)
+    count_warnings = [f for f in _sev(findings, "warning") if "index lists" in f.message]
+    assert len(count_warnings) == 0
+
+
 def test_bad_schema_is_error_and_exit_1(vault, monkeypatch):
     (vault / "wiki/sources/Quebrada.md").write_text("---\ntype: banana\n---\nx\n", encoding="utf-8")
     index.compile(vault)

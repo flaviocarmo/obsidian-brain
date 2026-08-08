@@ -50,7 +50,7 @@ def main() -> int:
             return 0  # too soon; next hook run picks it up
         proc = subprocess.run(
             [sys.executable, str(BRAIN), "--vault", str(vault), "compile-index"],
-            capture_output=True, text=True, timeout=60,
+            capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=60,
         )
         if proc.returncode == 0:
             dirty.unlink(missing_ok=True)

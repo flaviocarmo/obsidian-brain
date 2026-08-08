@@ -33,6 +33,20 @@ def test_violation_blocks(vault):
     assert out["decision"] == "block" and "frontmatter" in out["reason"]
 
 
+def test_violation_blocks_accented_filename(vault):
+    """The hook decodes the brain.py child's stdout with the locale codec
+    (cp1252 on Windows) while the CLI writes UTF-8; accented paths used to
+    come back mangled instead of the correctly-decoded name."""
+    name = "Identificação Ruim.md"
+    bad = vault / "wiki/sources" / name
+    bad.write_text("# sem frontmatter\n", encoding="utf-8")
+    r = _run_hook({"tool_input": {"file_path": str(bad)}}, str(vault))
+    assert r.returncode == 0
+    out = json.loads(r.stdout)
+    assert out["decision"] == "block"
+    assert name in out["reason"]
+
+
 def test_good_write_is_silent(vault):
     good = vault / "wiki/sources/Pagina Um.md"
     r = _run_hook({"tool_input": {"file_path": str(good)}}, str(vault))

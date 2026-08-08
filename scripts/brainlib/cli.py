@@ -49,10 +49,9 @@ def _cmd_extract(args) -> int:
         print(f"\n{'-' * 8}\n".join(parts))
         return 0
     sections = extract.toc(text)
-    if args.level:
+    if args.level is not None:
         sections = [s for s in sections if s.level <= args.level]
     if args.toc or extract.estimate_tokens(text) >= FULL_PAGE_TOKEN_LIMIT:
-        rel = path.as_posix()
         print(f"# TOC: {path.stem} ({extract.estimate_tokens(text)} tokens estimados)")
         for s in sections:
             print(f"{'  ' * (s.level - 1)}- {s.title} (~{s.tokens} tokens)")
@@ -122,8 +121,8 @@ def main(argv: list[str] | None = None) -> int:
                 print(fp.summary())
                 print("dry-run; use 'brain fold --apply' to execute")
             return 0
-    except config.ConfigError as e:
-        print(f"config: {e}", file=sys.stderr)
+    except (config.ConfigError, OSError) as e:
+        print(f"brain: {e}", file=sys.stderr)
         return 2
     if not args.command:
         print("usage: brain <command>", file=sys.stderr)

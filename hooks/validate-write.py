@@ -44,7 +44,7 @@ def main() -> int:
             return 0
         proc = subprocess.run(
             [sys.executable, str(BRAIN), "--vault", str(vault), "validate", str(target)],
-            capture_output=True, text=True, timeout=60,
+            capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=60,
         )
         errors = [l for l in proc.stdout.splitlines() if l.startswith("ERROR: ")]
         warns = [l for l in proc.stdout.splitlines() if l.startswith("WARN: ")]

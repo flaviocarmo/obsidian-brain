@@ -36,6 +36,17 @@ def test_extract_big_page_returns_toc(vault, capsys, monkeypatch):
     assert rc == 0 and "--heading" in out and "xxxx" not in out
 
 
+def test_extract_toc_level_zero_is_honored(vault, capsys, monkeypatch):
+    """`if args.level:` treated --level 0 as falsy and skipped the filter
+    entirely; 0 is a legitimate (if degenerate) level filter."""
+    monkeypatch.setenv("BRAIN_VAULT", str(vault))
+    rc = cli.main(["extract", "Contrato Grande", "--toc", "--level", "0"])
+    out = capsys.readouterr().out
+    assert rc == 0
+    assert "Identificacao" not in out
+    assert "Faturas 2026" not in out
+
+
 def test_extract_missing_page(vault, capsys, monkeypatch):
     monkeypatch.setenv("BRAIN_VAULT", str(vault))
     assert cli.main(["extract", "Nao Existe"]) == 1

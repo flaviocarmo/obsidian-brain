@@ -15,7 +15,7 @@ STATUSES = {"seed", "developing", "mature", "evergreen"}
 REQUIRED_KEYS = ("type", "title", "created", "updated", "tags", "status")
 HOT_WORD_LIMIT = 500
 _DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
-_ANTERIOR = re.compile(r"anterior", re.IGNORECASE)
+_ANTERIOR = re.compile(r"\banterior\b", re.IGNORECASE)
 _H_DATE_BR = re.compile(r"(\d{2})/(\d{2})/(\d{4})")
 _H_DATE_ISO = re.compile(r"(\d{4})-(\d{2})-(\d{2})")
 
@@ -156,7 +156,10 @@ def check_log(vault: Path, text: str, by_brain: bool) -> list[str]:
         update_log_state(vault, text)
         return []
     body = _body_of(text)
-    if len(body) >= old_len and hashlib.sha256(body[-old_len:]).hexdigest() == old_hash:
+    # body[-old_len:] misbehaves when old_len == 0 (Python slicing treats -0
+    # as 0, returning the whole body instead of an empty prefix), which would
+    # falsely block the very first append to an empty-bodied log.
+    if len(body) >= old_len and hashlib.sha256(body[len(body) - old_len:]).hexdigest() == old_hash:
         update_log_state(vault, text)
         return []
     return ["wiki/log.md is append-at-top only: existing entries were edited or removed; restore them and prepend the new entry"]

@@ -17,6 +17,14 @@ def test_compile_skips_folds(vault):
     assert "arquivo-velho" not in (vault / "wiki/index.md").read_text(encoding="utf-8")
 
 
+def test_compile_skips_meta(vault):
+    (vault / "wiki/meta/lint-report.md").write_text(
+        "---\ntype: meta\ntitle: \"Lint Report\"\n---\ncorpo", encoding="utf-8"
+    )
+    index.compile(vault)
+    assert "lint-report" not in (vault / "wiki/index.md").read_text(encoding="utf-8")
+
+
 def test_compile_is_idempotent_module_date(vault, monkeypatch):
     index.compile(vault)
     first = (vault / "wiki/index.md").read_text(encoding="utf-8")

@@ -13,6 +13,7 @@ _ENTRY = re.compile(r"^## \[(\d{4})-(\d{2})-(\d{2})\]", re.MULTILINE)
 @dataclass
 class FoldPlan:
     fm_block: str
+    preamble: str = ""  # text between frontmatter and the first "## [date]" entry
     keep: list[str] = field(default_factory=list)
     archive: dict[str, list[str]] = field(default_factory=dict)
 
@@ -37,7 +38,9 @@ def plan(vault: Path, keep_days: int = 30, today: date | None = None) -> FoldPla
     cutoff = today - timedelta(days=keep_days)
     text = (vault / "wiki" / "log.md").read_text(encoding="utf-8")
     block, body = frontmatter.split(text)
-    fp = FoldPlan(fm_block=block or "type: meta\ntitle: \"Log\"")
+    marks = list(_ENTRY.finditer(body))
+    preamble = body[: marks[0].start()] if marks else body
+    fp = FoldPlan(fm_block=block or "type: meta\ntitle: \"Log\"", preamble=preamble.strip("\n"))
     for d, entry in _entries(body):
         if d >= cutoff:
             fp.keep.append(entry)
@@ -60,7 +63,16 @@ def apply(vault: Path, fp: FoldPlan) -> str:
                 "tags: [log-archive]\nstatus: evergreen\n---\n\n"
             )
         target.write_text(base + "\n".join(entries) + "\n", encoding="utf-8")
-    new_log = "---\n" + fp.fm_block.strip() + "\n---\n\n" + "\n".join(fp.keep) + "\n"
-    (vault / "wiki" / "log.md").write_text(new_log, encoding="utf-8")
+
+    log_path = vault / "wiki" / "log.md"
+    meta_dir = vault / ".vault-meta"
+    meta_dir.mkdir(parents=True, exist_ok=True)
+    if log_path.exists():
+        # Destructive single-file rewrite: keep a pre-apply backup.
+        (meta_dir / "log.md.bak").write_text(log_path.read_text(encoding="utf-8"), encoding="utf-8")
+
+    preamble = f"{fp.preamble}\n\n" if fp.preamble else ""
+    new_log = "---\n" + fp.fm_block.strip() + "\n---\n\n" + preamble + "\n".join(fp.keep) + "\n"
+    log_path.write_text(new_log, encoding="utf-8")
     validate.update_log_state(vault, new_log)
     return fp.summary()

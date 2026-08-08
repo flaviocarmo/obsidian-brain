@@ -46,6 +46,17 @@ def test_hot_over_500_words_fails(vault):
     assert not r.ok and any("500" in e for e in r.errors)
 
 
+def test_hot_anteriormente_heading_passes(vault):
+    """A bare substring match on "anterior" false-flagged "anteriormente"."""
+    hot = vault / "wiki/hot.md"
+    hot.write_text(
+        "---\ntype: meta\ntitle: \"Hot\"\nupdated: 2026-06-01\n---\n\n"
+        "## Contexto anteriormente relevante\n\nok\n",
+        encoding="utf-8",
+    )
+    assert _v(vault, "wiki/hot.md").ok
+
+
 def test_hot_anterior_section_fails(vault):
     hot = vault / "wiki/hot.md"
     hot.write_text(

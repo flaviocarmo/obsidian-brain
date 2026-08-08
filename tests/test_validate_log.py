@@ -28,6 +28,22 @@ def test_middle_edit_fails(vault):
     assert not r.ok and any("append" in e for e in r.errors)
 
 
+def test_first_append_to_empty_bodied_log_passes(vault):
+    """body[-old_len:] with old_len == 0 used to return the whole body,
+    falsely blocking the very first append to a log with no entries yet."""
+    log = vault / "wiki/log.md"
+    log.write_text("---\ntype: meta\ntitle: \"Log\"\nupdated: 2026-06-01\n---\n", encoding="utf-8")
+    r = validate.validate_file(vault, log)
+    assert r.ok  # registers state for the empty body
+
+    log.write_text(
+        "---\ntype: meta\ntitle: \"Log\"\nupdated: 2026-06-01\n---\n\n"
+        "## [2026-06-01] Primeira entrada\n\nx\n",
+        encoding="utf-8",
+    )
+    assert validate.validate_file(vault, log).ok
+
+
 def test_by_brain_rewrites_state(vault):
     validate.validate_file(vault, vault / "wiki/log.md")
     (vault / "wiki/log.md").write_text("---\ntype: meta\ntitle: \"Log\"\nupdated: 2026-06-20\n---\n\nreescrito\n", encoding="utf-8")
