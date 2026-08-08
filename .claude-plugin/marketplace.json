@@ -1,0 +1,11 @@
+{
+  "name": "obsidian-brain-marketplace",
+  "owner": { "name": "Flavio Carmo" },
+  "plugins": [
+    {
+      "name": "obsidian-brain",
+      "source": "./",
+      "description": "Second brain em vault Obsidian, Windows nativo."
+    }
+  ]
+}
