@@ -57,3 +57,36 @@ def test_roundtrip():
     meta = fm.parse(block)
     again = fm.parse(fm.split(fm.serialize(meta) + "\ncorpo")[0])
     assert again == meta
+
+
+def test_folded_list_item_round_trips_into_one_item():
+    """A quoted list item wrapped at ~80 cols (2-space continuation indent)
+    must fold into a single item, not be misread as a nested mapping."""
+    block = (
+        "type: source\n"
+        "title: \"T\"\n"
+        "related:\n"
+        "- '[[Sessao 2026-07-28 Link de Senha do SmartGIS Prefeitura - Rota Migrada e CR no\n"
+        "  ConfigMap]]'\n"
+    )
+    meta = fm.parse(block)
+    assert len(meta["related"]) == 1
+    assert "ConfigMap]]" in meta["related"][0]
+    assert meta["related"][0].startswith("[[Sessao 2026-07-28")
+
+
+def test_folded_scalar_concatenates():
+    block = (
+        "type: source\n"
+        "verdict: Playwright MCP fica como default local; browser-use\n"
+        "  so pra scraping massivo.\n"
+    )
+    meta = fm.parse(block)
+    assert meta["verdict"] == (
+        "Playwright MCP fica como default local; browser-use so pra scraping massivo."
+    )
+
+
+def test_true_nested_mapping_still_rejected():
+    with pytest.raises(fm.FrontmatterError):
+        fm.parse("related:\n  child: value\n")
