@@ -51,7 +51,7 @@ C:\drive-d\projetos\obsidian-brain\
 ```
 
 - Instalação: `claude plugin marketplace add <path do repo>` + `claude plugin install`. Upgrade = commit.
-- Config: `~/.claude/brain.json` com `{"vault": "C:\\Users\\<user>\\Dropbox\\Apps\\obsidian\\<Vault>"}`. Nada de path hardcoded. Hooks usam o mesmo arquivo para decidir escopo (Write fora do vault = no-op).
+- Config: `~/.claude/brain.json` com `{"vault": "C:\\path\\to\\vault"}`. Nada de path hardcoded. Hooks usam o mesmo arquivo para decidir escopo (Write fora do vault = no-op).
 - **Stdlib pura.** Sem PyYAML: o frontmatter do vault é YAML restrito por schema (sem nested objects, decisão do Obsidian Properties UI), parser próprio de ~60 linhas cobre e é testável. Sem dependência = sem passo de install.
 
 ## CLI `brain.py` — subcomandos
