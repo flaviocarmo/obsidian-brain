@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented here. Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [SemVer](https://semver.org/).
 
+## [0.3.0] - 2026-08-09
+
+### Added
+- Automatic session capture: a `Stop` hook enqueues sessions into `.vault-meta/capture-queue.jsonl` (deterministic, zero LLM cost, consecutive stops collapse).
+- `brain digest [--dry-run] [--model X]`: batches pending sessions into one headless `claude -p` run that writes `wiki/journal/` pages and a top log entry. Contract ledgers, hot cache and index remain out of the automatic path.
+
 ## [0.2.1] - 2026-08-09
 
 ### Added
@@ -35,6 +41,7 @@ Initial release.
 - Restricted-YAML frontmatter parser with folded-line support; UTF-8-safe subprocess handling for accented filenames.
 - 81 pytest tests, cp1252-console safe.
 
+[0.3.0]: https://github.com/flaviocarmo/obsidian-brain/compare/v0.2.1...v0.3.0
 [0.2.1]: https://github.com/flaviocarmo/obsidian-brain/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/flaviocarmo/obsidian-brain/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/flaviocarmo/obsidian-brain/compare/v0.1.0...v0.1.1

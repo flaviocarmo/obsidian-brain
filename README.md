@@ -95,10 +95,27 @@ Exit codes: 0 ok, 1 violation found, 2 usage or config error.
 - Ledger pages out of chronological order get a warning
 - A hook failure never breaks the session: worst case degrades to a plain write
 
+### Automatic session capture (optional)
+
+A `Stop` hook enqueues every Claude Code session (zero LLM cost) into `.vault-meta/capture-queue.jsonl`. A daily batch then turns the queue into `wiki/journal/` pages:
+
+```
+python <plugin>/scripts/brain.py digest --dry-run   # list what is pending
+python <plugin>/scripts/brain.py digest             # one headless claude run digests the batch
+```
+
+Schedule it (Windows example):
+
+```
+schtasks /Create /F /SC DAILY /ST 22:00 /TN obsidian-brain-digest /TR "cmd /c python <repo>\scriptsrain.py digest >> <vault>\.vault-meta\digest.log 2>&1"
+```
+
+The automatic path writes journal pages and a log entry only; contract ledgers, hot cache and index stay curated (manual `/save`).
+
 ### Development
 
 ```
-python -m pytest -v      # 81 tests, Windows-native
+python -m pytest -v      # 88 tests, Windows-native
 ```
 
 Design spec and implementation plan live in [`docs/superpowers/`](docs/superpowers/).
@@ -161,10 +178,21 @@ Os mesmos comandos da seção em inglês: `extract`, `validate`, `lint`, `compil
 
 Frontmatter no schema em toda página; `hot.md` dentro do contrato de 500 palavras; `index.md` intocável à mão (e recompilado sozinho, debounce de 30 s); `log.md` só aceita entrada nova no topo; `.raw/` imutável; ledger fora de ordem cronológica gera aviso. Falha de hook nunca quebra a sessão: o pior caso degrada para uma escrita simples.
 
+### Captura automática de sessões (opcional)
+
+Um hook `Stop` enfileira toda sessão do Claude Code (custo zero de LLM) em `.vault-meta/capture-queue.jsonl`. Um lote diário transforma a fila em páginas de `wiki/journal/`:
+
+```
+python <plugin>/scripts/brain.py digest --dry-run   # lista o que está pendente
+python <plugin>/scripts/brain.py digest             # uma execução headless digere o lote
+```
+
+Agendamento (exemplo Windows): `schtasks /Create /SC DAILY /ST 22:00 ...` como na seção em inglês. O caminho automático escreve journal e log apenas; ledgers de contrato, hot cache e index continuam curadoria manual (`/save`).
+
 ### Desenvolvimento
 
 ```
-python -m pytest -v      # 81 testes, Windows nativo
+python -m pytest -v      # 88 testes, Windows nativo
 ```
 
 Spec de design e plano de implementação em [`docs/superpowers/`](docs/superpowers/).

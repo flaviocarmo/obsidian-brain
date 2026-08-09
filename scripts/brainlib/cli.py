@@ -30,6 +30,9 @@ def build_parser() -> argparse.ArgumentParser:
     sub.add_parser("hot-check")
     fold = sub.add_parser("fold")
     fold.add_argument("--apply", action="store_true")
+    dig = sub.add_parser("digest")
+    dig.add_argument("--dry-run", action="store_true")
+    dig.add_argument("--model", default=None)
     return p
 
 
@@ -121,6 +124,10 @@ def main(argv: list[str] | None = None) -> int:
                 print(fp.summary())
                 print("dry-run; use 'brain fold --apply' to execute")
             return 0
+        if args.command == "digest":
+            from . import digest as digest_mod
+            vault = config.vault_path(args.vault)
+            return digest_mod.main_cli(vault, args.model, args.dry_run)
     except (config.ConfigError, OSError) as e:
         print(f"brain: {e}", file=sys.stderr)
         return 2
