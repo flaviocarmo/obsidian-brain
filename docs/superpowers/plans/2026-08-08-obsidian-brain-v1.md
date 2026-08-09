@@ -2485,7 +2485,7 @@ Esta task toca ambiente real e arquivos fora do repo: executar com o usuário ac
 Criar `~/.claude/brain.json`:
 
 ```json
-{ "vault": "C:\\Users\\flavi\\Dropbox\\Apps\\obsidian\\Work" }
+{ "vault": "C:\\path\\to\\vault" }
 ```
 
 - [ ] **Step 2: Instalar plugin**

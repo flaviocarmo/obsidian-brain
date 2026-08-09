@@ -15,7 +15,10 @@ def vault_path(cli_override: str | None = None) -> Path:
     raw = cli_override or os.environ.get("BRAIN_VAULT")
     if not raw:
         if not CONFIG_FILE.exists():
-            raise ConfigError(f"no vault configured: set BRAIN_VAULT or create {CONFIG_FILE}")
+            raise ConfigError(
+                f"no vault configured. ASK THE USER for their Obsidian vault folder, "
+                f'then write {CONFIG_FILE} with {{"vault": "<absolute path>"}} and retry'
+            )
         try:
             data = json.loads(CONFIG_FILE.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError) as e:
