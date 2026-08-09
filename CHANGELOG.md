@@ -2,6 +2,14 @@
 
 All notable changes to this project are documented here. Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [SemVer](https://semver.org/).
 
+## [0.5.0] - 2026-08-09
+
+### Added
+- **Cross-page contradiction detection** in `brain lint`: pages are joined on strong identifiers (NF/OS/Fatura numbers) and a warning is raised when the more recently updated page still claims *pending* while an older page already claims *issued*. Both sides are reported with their `updated` dates; the tool never picks a winner.
+
+### Notes
+- A money-value comparison rule was implemented and **dropped after testing against a real vault**: gross, net and retention figures for the same invoice legitimately differ, and the rule produced 4x more findings than the status rule with no added signal. The recency guard exists for the same reason — "pending in May, issued in August" is progress, not a contradiction.
+
 ## [0.4.0] - 2026-08-09
 
 ### Added
@@ -49,6 +57,7 @@ Initial release.
 - Restricted-YAML frontmatter parser with folded-line support; UTF-8-safe subprocess handling for accented filenames.
 - 81 pytest tests, cp1252-console safe.
 
+[0.5.0]: https://github.com/flaviocarmo/obsidian-brain/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/flaviocarmo/obsidian-brain/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/flaviocarmo/obsidian-brain/compare/v0.2.1...v0.3.0
 [0.2.1]: https://github.com/flaviocarmo/obsidian-brain/compare/v0.2.0...v0.2.1
