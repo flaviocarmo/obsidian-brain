@@ -100,15 +100,13 @@ Exit codes: 0 ok, 1 violation found, 2 usage or config error.
 A `Stop` hook enqueues every Claude Code session (zero LLM cost) into `.vault-meta/capture-queue.jsonl`. A daily batch then turns the queue into `wiki/journal/` pages:
 
 ```
-python <plugin>/scripts/brain.py digest --dry-run   # list what is pending
-python <plugin>/scripts/brain.py digest             # one headless claude run digests the batch
 ```
 
 Schedule it (Windows example):
 
 ```
 schtasks /Create /F /SC DAILY /ST 22:00 /TN obsidian-brain-digest /TR "cmd /c python C:\path\to\repo\scripts\brain.py digest >> C:\path\to\vault\.vault-meta\digest.log 2>&1"
-epo\scriptsrain.py digest >> C:\path	oault\.vault-meta\digest.log 2>&1"
+ault\.vault-meta\digest.log 2>&1"
 ```
 
 The automatic path writes journal pages and a log entry only; contract ledgers, hot cache and index stay curated (manual `/save`).
@@ -184,8 +182,6 @@ Frontmatter no schema em toda página; `hot.md` dentro do contrato de 500 palavr
 Um hook `Stop` enfileira toda sessão do Claude Code (custo zero de LLM) em `.vault-meta/capture-queue.jsonl`. Um lote diário transforma a fila em páginas de `wiki/journal/`:
 
 ```
-python <plugin>/scripts/brain.py digest --dry-run   # lista o que está pendente
-python <plugin>/scripts/brain.py digest             # uma execução headless digere o lote
 ```
 
 Agendamento (exemplo Windows): `schtasks /Create /SC DAILY /ST 22:00 ...` como na seção em inglês. O caminho automático escreve journal e log apenas; ledgers de contrato, hot cache e index continuam curadoria manual (`/save`).
