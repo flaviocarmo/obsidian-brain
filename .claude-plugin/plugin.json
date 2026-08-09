@@ -1,6 +1,8 @@
 {
   "name": "obsidian-brain",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Second brain em vault Obsidian, Windows nativo: validacao por hook, extrator de secao, lint, fold. Retrieval via basic-memory.",
-  "author": { "name": "Flavio Carmo" }
+  "author": {
+    "name": "Flavio Carmo"
+  }
 }
