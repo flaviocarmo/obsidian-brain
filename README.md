@@ -107,7 +107,8 @@ python <plugin>/scripts/brain.py digest             # one headless claude run di
 Schedule it (Windows example):
 
 ```
-schtasks /Create /F /SC DAILY /ST 22:00 /TN obsidian-brain-digest /TR "cmd /c python C:\path	oepo\scriptsrain.py digest >> C:\path	oault\.vault-meta\digest.log 2>&1"
+schtasks /Create /F /SC DAILY /ST 22:00 /TN obsidian-brain-digest /TR "cmd /c python C:\path\to\repo\scripts\brain.py digest >> C:\path\to\vault\.vault-meta\digest.log 2>&1"
+epo\scriptsrain.py digest >> C:\path	oault\.vault-meta\digest.log 2>&1"
 ```
 
 The automatic path writes journal pages and a log entry only; contract ledgers, hot cache and index stay curated (manual `/save`).
