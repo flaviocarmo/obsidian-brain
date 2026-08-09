@@ -10,7 +10,7 @@ from pathlib import Path
 from . import frontmatter
 
 TYPES = {"source", "entity", "concept", "domain", "comparison", "question",
-         "overview", "meta", "area", "goal", "person"}
+         "overview", "meta", "area", "goal", "person", "decision"}
 STATUSES = {"seed", "developing", "mature", "evergreen"}
 REQUIRED_KEYS = ("type", "title", "created", "updated", "tags", "status")
 HOT_WORD_LIMIT = 500

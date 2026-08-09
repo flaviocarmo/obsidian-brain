@@ -2,6 +2,11 @@
 
 All notable changes to this project are documented here. Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [SemVer](https://semver.org/).
 
+## [0.2.1] - 2026-08-09
+
+### Added
+- `decision` in the canonical `type` vocabulary (engineering decision records are a first-class page kind).
+
 ## [0.2.0] - 2026-08-09
 
 ### Changed
@@ -30,6 +35,7 @@ Initial release.
 - Restricted-YAML frontmatter parser with folded-line support; UTF-8-safe subprocess handling for accented filenames.
 - 81 pytest tests, cp1252-console safe.
 
+[0.2.1]: https://github.com/flaviocarmo/obsidian-brain/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/flaviocarmo/obsidian-brain/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/flaviocarmo/obsidian-brain/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/flaviocarmo/obsidian-brain/releases/tag/v0.1.0
