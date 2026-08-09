@@ -46,4 +46,4 @@ Configuração em `~/.claude/brain.json`:
 
 ## Status
 
-Fase de design. Spec completa em [`docs/superpowers/specs/2026-08-07-obsidian-brain-design.md`](docs/superpowers/specs/2026-08-07-obsidian-brain-design.md).
+v1 instalado e operacional (2026-08-09): CLI completo, 2 hooks ativos, 6 skills, 81 testes verdes em Windows nativo. Validado contra um vault real de 550 páginas (review final sondou o dado de verdade, não só a suíte). Spec em [`docs/superpowers/specs/2026-08-07-obsidian-brain-design.md`](docs/superpowers/specs/2026-08-07-obsidian-brain-design.md); plano de implementação em [`docs/superpowers/plans/2026-08-08-obsidian-brain-v1.md`](docs/superpowers/plans/2026-08-08-obsidian-brain-v1.md).
