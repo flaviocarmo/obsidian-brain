@@ -2,6 +2,14 @@
 
 All notable changes to this project are documented here. Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [SemVer](https://semver.org/).
 
+## [0.4.0] - 2026-08-09
+
+### Added
+- `brain doctor`: verifies every requirement before use (Python floor, vault reachable with `wiki/`, hooks installed, **basic-memory installed and with a project indexing the vault**). Exit 1 when a requirement is missing.
+
+### Changed
+- **basic-memory is now a hard requirement, not optional.** It is the search layer; silently degrading to grep produced worse answers with no signal. The `query` skill now surfaces the failure and points at `brain doctor` instead of quietly falling back.
+
 ## [0.3.0] - 2026-08-09
 
 ### Added
@@ -41,6 +49,7 @@ Initial release.
 - Restricted-YAML frontmatter parser with folded-line support; UTF-8-safe subprocess handling for accented filenames.
 - 81 pytest tests, cp1252-console safe.
 
+[0.4.0]: https://github.com/flaviocarmo/obsidian-brain/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/flaviocarmo/obsidian-brain/compare/v0.2.1...v0.3.0
 [0.2.1]: https://github.com/flaviocarmo/obsidian-brain/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/flaviocarmo/obsidian-brain/compare/v0.1.1...v0.2.0

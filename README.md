@@ -14,15 +14,16 @@ LLM-maintained knowledge bases fail in predictable ways: the hot-context file gr
 
 - **Write directly, validate immediately.** Claude writes with its normal Write/Edit tools. A `PostToolUse` hook validates every write inside the vault and feeds violations straight back to the model, which fixes them in the next turn. No staging area, no transaction engine, safe for vaults synced by Dropbox/OneDrive/Syncthing because nothing ever rolls files back behind your back.
 - **Section extractor for big pages.** Real vaults grow 250 KB ledger pages. `brain extract` returns a token-estimated table of contents, then just the section you ask for, fence-aware (headings inside code blocks are not headings).
-- **Search stays external.** basic-memory indexes the vault locally (FTS + vector, zero LLM tokens). This plugin implements what comes after search, not search itself.
-- **Everything deterministic is code with tests.** 81 pytest tests, Windows-native, cp1252-console safe, pure stdlib.
+- **Search stays external, and required.** basic-memory indexes the vault locally (FTS + vector, zero LLM tokens); this plugin implements what comes after search, not search itself. `brain doctor` fails loudly when it is missing, because silent degradation to grep is worse than an error.
+- **Everything deterministic is code with tests.** 99 pytest tests, Windows-native, cp1252-console safe, pure stdlib.
 
 ### Requirements
 
 - Python 3.11+ (no packages needed, stdlib only)
 - Claude Code with plugin and hook support
 - An Obsidian vault (or any folder of Markdown with YAML frontmatter)
-- Optional but recommended: [basic-memory](https://github.com/basicmachines-co/basic-memory) pointed at the vault for search; without it the query skill falls back to grep
+- **[basic-memory](https://github.com/basicmachines-co/basic-memory) (required)** — the search layer, with a project pointing at your vault:
+  `uv tool install basic-memory` · `basic-memory project add <name> "<vault path>"` · `claude mcp add basic-memory -- basic-memory mcp`
 
 ### Install
 
@@ -38,6 +39,8 @@ On first use, Claude notices there is no vault configured and asks you where it 
 ```
 
 The `BRAIN_VAULT` environment variable overrides the file when set. Start a new Claude Code session and the skills and hooks are live.
+
+Check the install with `python <plugin>/scripts/brain.py doctor` — it verifies Python, the vault, the hooks, and that basic-memory is installed **and** has a project indexing your vault. Exit code 1 means a requirement is missing.
 
 ### Vault layout (data-derived taxonomy)
 
@@ -81,6 +84,7 @@ python <plugin>/scripts/brain.py lint --json
 python <plugin>/scripts/brain.py compile-index
 python <plugin>/scripts/brain.py hot-check
 python <plugin>/scripts/brain.py fold            # dry-run; add --apply to execute
+python <plugin>/scripts/brain.py doctor          # check requirements (basic-memory included)
 ```
 
 Exit codes: 0 ok, 1 violation found, 2 usage or config error.
@@ -115,7 +119,7 @@ The automatic path writes journal pages and a log entry only; contract ledgers, 
 ### Development
 
 ```
-python -m pytest -v      # 88 tests, Windows-native
+python -m pytest -v      # 99 tests, Windows-native
 ```
 
 Design spec and implementation plan live in [`docs/superpowers/`](docs/superpowers/).
@@ -130,15 +134,16 @@ Bases de conhecimento mantidas por LLM falham de formas previsíveis: o arquivo 
 
 - **Escreve direto, valida na hora.** O Claude escreve com Write/Edit normais. Um hook `PostToolUse` valida cada escrita no vault e devolve a violação ao modelo, que corrige no turno seguinte. Sem staging, sem motor de transação, seguro para vault em Dropbox/OneDrive/Syncthing porque nada faz rollback de arquivo pelas suas costas.
 - **Extrator de seção para páginas grandes.** Vault real cria páginas de ledger de 250 KB. `brain extract` devolve um sumário com estimativa de tokens por seção e depois só a seção pedida, ciente de code fences (heading dentro de bloco de código não é heading).
-- **Busca fica de fora.** O basic-memory indexa o vault localmente (FTS + vetorial, zero tokens de LLM). Este plugin implementa o que vem depois da busca, não a busca.
-- **Tudo que é determinístico é código com teste.** 81 testes pytest, Windows nativo, seguro em console cp1252, stdlib pura.
+- **Busca fica de fora, e é obrigatória.** O basic-memory indexa o vault localmente (FTS + vetorial, zero tokens de LLM); este plugin implementa o que vem depois da busca, não a busca. O `brain doctor` falha alto quando ele falta, porque degradar para grep em silêncio é pior que erro.
+- **Tudo que é determinístico é código com teste.** 99 testes pytest, Windows nativo, seguro em console cp1252, stdlib pura.
 
 ### Requisitos
 
 - Python 3.11+ (sem pacotes, só stdlib)
 - Claude Code com suporte a plugins e hooks
 - Um vault Obsidian (ou qualquer pasta de Markdown com frontmatter YAML)
-- Opcional e recomendado: [basic-memory](https://github.com/basicmachines-co/basic-memory) apontado para o vault; sem ele a skill de query cai para grep
+- **[basic-memory](https://github.com/basicmachines-co/basic-memory) (obrigatório)** — é a camada de busca, com um projeto apontando para o vault:
+  `uv tool install basic-memory` · `basic-memory project add <nome> "<caminho do vault>"` · `claude mcp add basic-memory -- basic-memory mcp`
 
 ### Instalação
 
@@ -154,6 +159,8 @@ No primeiro uso, o Claude percebe que não há vault configurado, pergunta onde 
 ```
 
 A variável de ambiente `BRAIN_VAULT` tem precedência quando definida. Abra uma sessão nova do Claude Code e as skills e hooks estarão ativos.
+
+Confira a instalação com `python <plugin>/scripts/brain.py doctor` — verifica Python, vault, hooks e se o basic-memory está instalado **e** com projeto indexando o vault. Exit 1 = requisito faltando.
 
 ### Layout do vault (taxonomia derivada do dado)
 
@@ -192,7 +199,7 @@ Agendamento (exemplo Windows): `schtasks /Create /SC DAILY /ST 22:00 ...` como n
 ### Desenvolvimento
 
 ```
-python -m pytest -v      # 88 testes, Windows nativo
+python -m pytest -v      # 99 testes, Windows nativo
 ```
 
 Spec de design e plano de implementação em [`docs/superpowers/`](docs/superpowers/).
