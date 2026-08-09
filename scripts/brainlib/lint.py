@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
 
-from . import conflicts, extract, frontmatter, validate
+from . import conflicts, duplicates, extract, frontmatter, validate
 
 _WIKILINK = re.compile(r"\[\[([^\]\|#]+)")
 _STALE = re.compile(r"\[!stale\]", re.IGNORECASE)
@@ -97,9 +97,15 @@ def run(vault: Path) -> list[Finding]:
         if listed != len(pages):
             findings.append(Finding("warning", "wiki/index.md", f"index lists {listed} pages, vault has {len(pages)}"))
 
+    rels = [(p, p.relative_to(vault).as_posix()) for p in pages]
+
     # cross-page contradictions: same identifier, incompatible claims
-    for c in conflicts.find([(p, p.relative_to(vault).as_posix()) for p in pages]):
+    for c in conflicts.find(rels):
         findings.append(Finding("warning", c.mentions[0].page, c.message()))
+
+    # near-duplicate pages: two pages that should probably be one
+    for d in duplicates.find(rels):
+        findings.append(Finding("info", d.page_a, d.message()))
     return findings
 
 

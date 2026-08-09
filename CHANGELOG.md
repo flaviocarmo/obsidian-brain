@@ -2,6 +2,14 @@
 
 All notable changes to this project are documented here. Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [SemVer](https://semver.org/).
 
+## [0.6.0] - 2026-08-09
+
+### Added
+- **Near-duplicate page detection** in `brain lint` (severity `info`): titles are tokenised and compared with Jaccard similarity inside each top-level folder, reporting pairs at or above 75%. Dated session prefixes and the `email-scan` marker are stripped first, otherwise every session page looks alike; single-token titles are skipped.
+
+### Notes
+- Cross-folder pairs are deliberately NOT compared: a `journal/` session page and the `domains/` page that distils it are the intended pattern, not a duplicate. The 75% threshold was calibrated against a 527-page vault (0.85 → 3 pairs, 0.75 → 5, 0.55 → 10) and the folder restriction removed the only cross-kind false positive.
+
 ## [0.5.0] - 2026-08-09
 
 ### Added
@@ -57,6 +65,7 @@ Initial release.
 - Restricted-YAML frontmatter parser with folded-line support; UTF-8-safe subprocess handling for accented filenames.
 - 81 pytest tests, cp1252-console safe.
 
+[0.6.0]: https://github.com/flaviocarmo/obsidian-brain/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/flaviocarmo/obsidian-brain/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/flaviocarmo/obsidian-brain/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/flaviocarmo/obsidian-brain/compare/v0.2.1...v0.3.0

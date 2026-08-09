@@ -13,10 +13,11 @@ A [Claude Code](https://claude.com/claude-code) plugin that turns an [Obsidian](
 LLM-maintained knowledge bases fail in predictable ways: the hot-context file grows past its budget, compiled indexes get edited by hand, chronological ledger pages receive blind appends, and huge pages get loaded whole into context when only one section matters. obsidian-brain moves that discipline out of prompt prose and into tested code, then lets the model do only what models are good at: judgment.
 
 - **Write directly, validate immediately.** Claude writes with its normal Write/Edit tools. A `PostToolUse` hook validates every write inside the vault and feeds violations straight back to the model, which fixes them in the next turn. No staging area, no transaction engine, safe for vaults synced by Dropbox/OneDrive/Syncthing because nothing ever rolls files back behind your back.
+- **Near-duplicate detection.** Two pages about the same thing are worse than one: updates land on a copy and queries return the stale one. Titles are compared within each folder (a session page and the concept page it distils are the intended pattern, not a duplicate).
 - **Contradiction detection.** Pages accrete, and two of them end up disagreeing about the same invoice or work order. The linter joins pages on strong identifiers and reports the pair when the *newer* page still says pending while an older one says issued. It never picks a winner: both sides are reported with their `updated` dates.
 - **Section extractor for big pages.** Real vaults grow 250 KB ledger pages. `brain extract` returns a token-estimated table of contents, then just the section you ask for, fence-aware (headings inside code blocks are not headings).
 - **Search stays external, and required.** basic-memory indexes the vault locally (FTS + vector, zero LLM tokens); this plugin implements what comes after search, not search itself. `brain doctor` fails loudly when it is missing, because silent degradation to grep is worse than an error.
-- **Everything deterministic is code with tests.** 108 pytest tests, Windows-native, cp1252-console safe, pure stdlib.
+- **Everything deterministic is code with tests.** 119 pytest tests, Windows-native, cp1252-console safe, pure stdlib.
 
 ### Requirements
 
@@ -71,7 +72,7 @@ Every wiki page carries frontmatter: `type`, `title`, `created`, `updated`, `tag
 | "query the vault: ..." | `query` | hot.md, then basic-memory search, then `extract --toc`/`--heading` on big pages; answers cite `[[Page#Heading]]` |
 | `/save` or "save this to the vault" | `save` | picks note type and folder, updates instead of duplicating, inserts ledger records in chronological position |
 | "ingest file.md" | `ingest` | source goes to `.raw/`, becomes atomic pages with provenance |
-| "lint the wiki" | `lint` | runs the deterministic linter (including cross-page contradictions), interprets, proposes fixes (applying is a separate approval) |
+| "lint the wiki" | `lint` | runs the deterministic linter (including cross-page contradictions and near-duplicates), interprets, proposes fixes (applying is a separate approval) |
 | "fold the log" | `fold` | dry-run of the log rollup into monthly archives; `--apply` only after approval |
 | "update hot cache" | `hot-cache` | archives the current hot.md, rewrites it whole within the 500-word budget |
 
@@ -120,7 +121,7 @@ The automatic path writes journal pages and a log entry only; contract ledgers, 
 ### Development
 
 ```
-python -m pytest -v      # 108 tests, Windows-native
+python -m pytest -v      # 119 tests, Windows-native
 ```
 
 Design spec and implementation plan live in [`docs/superpowers/`](docs/superpowers/).
@@ -134,10 +135,11 @@ Design spec and implementation plan live in [`docs/superpowers/`](docs/superpowe
 Bases de conhecimento mantidas por LLM falham de formas previsíveis: o arquivo de contexto quente estoura o orçamento, o índice compilado é editado à mão, páginas de ledger cronológico recebem appends cegos e páginas enormes entram inteiras no contexto quando só uma seção importa. O obsidian-brain tira essa disciplina da prosa de prompt e a coloca em código testado, deixando para o modelo só o que modelo faz bem: julgamento.
 
 - **Escreve direto, valida na hora.** O Claude escreve com Write/Edit normais. Um hook `PostToolUse` valida cada escrita no vault e devolve a violação ao modelo, que corrige no turno seguinte. Sem staging, sem motor de transação, seguro para vault em Dropbox/OneDrive/Syncthing porque nada faz rollback de arquivo pelas suas costas.
+- **Detecção de quase-duplicatas.** Duas páginas sobre a mesma coisa são piores que uma: a atualização cai numa cópia e a busca devolve a outra. Títulos são comparados dentro de cada pasta (página de sessão e a página de domínio que ela destila são o padrão desejado, não duplicata).
 - **Detecção de contradições.** Páginas crescem por acréscimo e duas acabam discordando sobre a mesma NF ou OS. O linter junta páginas por identificadores fortes e reporta o par quando a página *mais recente* ainda diz pendente e uma mais antiga já diz emitida. Nunca escolhe vencedor: mostra os dois lados com as datas `updated`.
 - **Extrator de seção para páginas grandes.** Vault real cria páginas de ledger de 250 KB. `brain extract` devolve um sumário com estimativa de tokens por seção e depois só a seção pedida, ciente de code fences (heading dentro de bloco de código não é heading).
 - **Busca fica de fora, e é obrigatória.** O basic-memory indexa o vault localmente (FTS + vetorial, zero tokens de LLM); este plugin implementa o que vem depois da busca, não a busca. O `brain doctor` falha alto quando ele falta, porque degradar para grep em silêncio é pior que erro.
-- **Tudo que é determinístico é código com teste.** 108 testes pytest, Windows nativo, seguro em console cp1252, stdlib pura.
+- **Tudo que é determinístico é código com teste.** 119 testes pytest, Windows nativo, seguro em console cp1252, stdlib pura.
 
 ### Requisitos
 
@@ -201,7 +203,7 @@ Agendamento (exemplo Windows): `schtasks /Create /SC DAILY /ST 22:00 ...` como n
 ### Desenvolvimento
 
 ```
-python -m pytest -v      # 108 testes, Windows nativo
+python -m pytest -v      # 119 testes, Windows nativo
 ```
 
 Spec de design e plano de implementação em [`docs/superpowers/`](docs/superpowers/).
