@@ -39,7 +39,9 @@ On first use, Claude notices there is no vault configured and asks you where it 
 
 The `BRAIN_VAULT` environment variable overrides the file when set. Start a new Claude Code session and the skills and hooks are live.
 
-### Vault layout (Modo D)
+### Vault layout (data-derived taxonomy)
+
+Structure follows the data, not note kinds (note kind already lives in frontmatter `type`):
 
 ```
 YourVault/
@@ -48,8 +50,10 @@ YourVault/
 │   ├── hot.md     # hot context, 500-word budget, always overwritten whole
 │   ├── index.md   # compiled catalog, never hand-edited (a hook recompiles it)
 │   ├── log.md     # append-only log, newest entry on top
-│   ├── areas/     # living pages treated as chronological ledgers
-│   ├── concepts/  sources/  people/  goals/  learning/  resources/  questions/
+│   ├── journal/   # dated session pages (time series)
+│   ├── contracts/ # living client/contract pages treated as chronological ledgers
+│   ├── domains/   # technical knowledge clustered by your real domains (subfolders)
+│   ├── people/
 │   ├── meta/      # lint reports
 │   └── folds/     # archives (old log entries, old hot caches)
 ```
@@ -134,9 +138,9 @@ No primeiro uso, o Claude percebe que não há vault configurado, pergunta onde 
 
 A variável de ambiente `BRAIN_VAULT` tem precedência quando definida. Abra uma sessão nova do Claude Code e as skills e hooks estarão ativos.
 
-### Layout do vault (Modo D)
+### Layout do vault (taxonomia derivada do dado)
 
-O mesmo da seção em inglês: `.raw/` imutável, `wiki/` com `hot.md` (500 palavras, sobrescrito inteiro), `index.md` (compilado, nunca à mão), `log.md` (append no topo), `areas/` como ledgers cronológicos e as demais pastas temáticas. Toda página tem frontmatter `type/title/created/updated/tags/status`, sem objetos aninhados.
+O mesmo da seção em inglês: `.raw/` imutável; `wiki/` com `hot.md` (500 palavras, sobrescrito inteiro), `index.md` (compilado, nunca à mão), `log.md` (append no topo), `journal/` (sessões datadas), `contracts/` (ledgers cronológicos de cliente/contrato), `domains/` (conhecimento por domínio real, em subpastas) e `people/`. A estrutura segue o dado; o tipo da nota já vive no frontmatter `type/title/created/updated/tags/status`, sem objetos aninhados.
 
 ### Uso por skills (dentro do Claude Code)
 
