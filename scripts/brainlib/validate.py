@@ -200,6 +200,6 @@ def validate_file(vault: Path, path: Path, by_brain: bool = False) -> Report:
     if name.startswith("folds/"):
         return r  # archives: parseable is enough
     r.errors += check_schema(meta)
-    if name.startswith("areas/"):
+    if name.startswith(("contracts/", "areas/")):
         r.warnings += check_ledger_chronology(text)
     return r

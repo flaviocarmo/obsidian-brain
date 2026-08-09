@@ -8,32 +8,32 @@ def _v(vault, rel, **kw):
 
 
 def test_good_page_passes(vault):
-    assert _v(vault, "wiki/sources/Pagina Um.md").ok
+    assert _v(vault, "wiki/journal/Pagina Um.md").ok
 
 
 def test_missing_frontmatter_fails(vault):
-    p = vault / "wiki/sources/Solta.md"
+    p = vault / "wiki/journal/Solta.md"
     p.write_text("# Sem frontmatter\n", encoding="utf-8")
-    r = _v(vault, "wiki/sources/Solta.md")
+    r = _v(vault, "wiki/journal/Solta.md")
     assert not r.ok and any("frontmatter" in e for e in r.errors)
 
 
 def test_bad_type_and_status_fail(vault):
-    p = vault / "wiki/sources/Ruim.md"
+    p = vault / "wiki/journal/Ruim.md"
     p.write_text(
         "---\ntype: banana\ntitle: \"R\"\ncreated: 2026-01-01\nupdated: 2025-12-31\n"
         "tags: []\nstatus: verde\n---\ncorpo\n",
         encoding="utf-8",
     )
-    r = _v(vault, "wiki/sources/Ruim.md")
+    r = _v(vault, "wiki/journal/Ruim.md")
     joined = " ".join(r.errors)
     assert "type" in joined and "status" in joined and "updated" in joined
 
 
 def test_nested_frontmatter_fails(vault):
-    p = vault / "wiki/sources/Nested.md"
+    p = vault / "wiki/journal/Nested.md"
     p.write_text("---\ntype: source\nmetadata:\n  a: b\n---\ncorpo\n", encoding="utf-8")
-    assert not _v(vault, "wiki/sources/Nested.md").ok
+    assert not _v(vault, "wiki/journal/Nested.md").ok
 
 
 def test_hot_over_500_words_fails(vault):
@@ -91,5 +91,5 @@ def test_non_md_ignored(vault):
 def test_cli_validate(vault, monkeypatch, capsys):
     from brainlib import cli
     monkeypatch.setenv("BRAIN_VAULT", str(vault))
-    assert cli.main(["validate", str(vault / "wiki/sources/Pagina Um.md")]) == 0
+    assert cli.main(["validate", str(vault / "wiki/journal/Pagina Um.md")]) == 0
     assert cli.main(["validate", str(vault / "wiki/index.md")]) == 1

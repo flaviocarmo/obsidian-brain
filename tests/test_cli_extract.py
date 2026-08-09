@@ -24,7 +24,7 @@ def test_extract_small_page_returns_full(vault, capsys, monkeypatch):
 
 def test_extract_big_page_returns_toc(vault, capsys, monkeypatch):
     big = "# T\n\n" + "".join(f"## Sec {i}\n" + "x" * 2000 + "\n" for i in range(60))
-    page = vault / "wiki/sources/Grande.md"
+    page = vault / "wiki/journal/Grande.md"
     page.write_text(
         "---\ntype: source\ntitle: \"Grande\"\ncreated: 2026-01-01\nupdated: 2026-01-01\n"
         "tags: []\nstatus: mature\n---\n\n" + big,

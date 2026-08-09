@@ -4,7 +4,7 @@ from brainlib import extract
 
 
 def test_toc_levels_and_tokens(vault):
-    text = (vault / "wiki/areas/Contrato Grande.md").read_text(encoding="utf-8")
+    text = (vault / "wiki/contracts/Contrato Grande.md").read_text(encoding="utf-8")
     sections = extract.toc(text)
     titles = [s.title for s in sections]
     assert "Identificacao" in titles
@@ -13,7 +13,7 @@ def test_toc_levels_and_tokens(vault):
 
 
 def test_get_section_includes_subsections(vault):
-    text = (vault / "wiki/areas/Contrato Grande.md").read_text(encoding="utf-8")
+    text = (vault / "wiki/contracts/Contrato Grande.md").read_text(encoding="utf-8")
     parts = extract.get_sections(text, "faturas 2026")
     assert len(parts) == 2
     assert "NFs emitidas" in parts[0]
@@ -29,7 +29,7 @@ def test_get_section_prefix_and_accent_insensitive_exact_first():
 def test_resolve_by_title_and_path(vault):
     p = extract.resolve_page(vault, "contrato grande")
     assert p.name == "Contrato Grande.md"
-    p2 = extract.resolve_page(vault, "wiki/sources/Pagina Um.md")
+    p2 = extract.resolve_page(vault, "wiki/journal/Pagina Um.md")
     assert p2.name == "Pagina Um.md"
 
 
@@ -73,12 +73,12 @@ def test_resolve_permalink_beats_prefix(vault):
     """Permalink match should win over accidental prefix match."""
     wiki = vault / "wiki"
     # Create a page with permalink: abc
-    (wiki / "sources/Permalink ABC.md").write_text(
+    (wiki / "journal/Permalink ABC.md").write_text(
         "---\ntype: source\ntitle: \"Permalink ABC\"\npermalink: abc\ncreated: 2026-05-01\nupdated: 2026-06-01\n---\n\nBody.\n",
         encoding="utf-8",
     )
     # Create another page whose stem starts with "abc"
-    (wiki / "sources/Abcdef Page.md").write_text(
+    (wiki / "journal/Abcdef Page.md").write_text(
         "---\ntype: source\ntitle: \"Abcdef Page\"\ncreated: 2026-05-01\nupdated: 2026-06-01\n---\n\nBody.\n",
         encoding="utf-8",
     )

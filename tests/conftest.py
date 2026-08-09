@@ -11,7 +11,7 @@ sys.path.insert(0, str(SCRIPTS))
 def vault(tmp_path):
     """Minimal Modo D vault used across tests."""
     wiki = tmp_path / "wiki"
-    for sub in ("areas", "sources", "concepts", "meta", "folds"):
+    for sub in ("contracts", "journal", "domains", "people", "meta", "folds"):
         (wiki / sub).mkdir(parents=True)
     (tmp_path / ".raw").mkdir()
     (tmp_path / ".vault-meta").mkdir()
@@ -33,9 +33,9 @@ def vault(tmp_path):
         p.write_text(text, encoding="utf-8")
         return p
 
-    page("sources/Pagina Um.md", "Pagina Um", body="# Pagina Um\n\nTexto A.\n\nLink [[Contrato Grande]].\n")
+    page("journal/Pagina Um.md", "Pagina Um", body="# Pagina Um\n\nTexto A.\n\nLink [[Contrato Grande]].\n")
     page(
-        "areas/Contrato Grande.md",
+        "contracts/Contrato Grande.md",
         "Contrato Grande",
         type_="area",
         body=(

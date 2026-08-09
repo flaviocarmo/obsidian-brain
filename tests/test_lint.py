@@ -8,7 +8,7 @@ def _sev(findings, s):
 
 
 def test_dead_wikilink_detected(vault):
-    p = vault / "wiki/sources/ComLinkMorto.md"
+    p = vault / "wiki/journal/ComLinkMorto.md"
     p.write_text(
         "---\ntype: source\ntitle: \"ComLinkMorto\"\ncreated: 2026-01-01\nupdated: 2026-01-01\n"
         "tags: []\nstatus: seed\n---\n\nVer [[Pagina Fantasma]].\n",
@@ -27,7 +27,7 @@ def test_orphan_detected(vault):
 
 
 def test_empty_section_detected(vault):
-    p = vault / "wiki/concepts/Vazio.md"
+    p = vault / "wiki/domains/Vazio.md"
     p.write_text(
         "---\ntype: concept\ntitle: \"Vazio\"\ncreated: 2026-01-01\nupdated: 2026-01-01\n"
         "tags: []\nstatus: seed\n---\n\n# Vazio\n\n## Secao Vazia\n\n## Outra\n\ntexto\n",
@@ -39,7 +39,7 @@ def test_empty_section_detected(vault):
 
 
 def test_empty_section_not_flagged_across_fence(vault):
-    p = vault / "wiki/concepts/ComFence.md"
+    p = vault / "wiki/domains/ComFence.md"
     p.write_text(
         "---\ntype: concept\ntitle: \"ComFence\"\ncreated: 2026-01-01\nupdated: 2026-01-01\n"
         "tags: []\nstatus: seed\n---\n\n# ComFence\n\n## Passos\n\n"
@@ -64,7 +64,7 @@ def test_recompile_after_lint_write_matches_page_count(vault, monkeypatch):
 
 
 def test_bad_schema_is_error_and_exit_1(vault, monkeypatch):
-    (vault / "wiki/sources/Quebrada.md").write_text("---\ntype: banana\n---\nx\n", encoding="utf-8")
+    (vault / "wiki/journal/Quebrada.md").write_text("---\ntype: banana\n---\nx\n", encoding="utf-8")
     index.compile(vault)
     monkeypatch.setenv("BRAIN_VAULT", str(vault))
     assert cli.main(["lint"]) == 1

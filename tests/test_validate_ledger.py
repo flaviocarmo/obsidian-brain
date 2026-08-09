@@ -20,7 +20,7 @@ def test_headings_without_dates_ignored():
 
 
 def test_area_page_gets_warning_not_error(vault):
-    p = vault / "wiki/areas/Contrato Grande.md"
+    p = vault / "wiki/contracts/Contrato Grande.md"
     text = p.read_text(encoding="utf-8").replace(
         "## Identificacao",
         "## Registro 05/06/2026\n\nz\n\n## Registro 01/05/2026",

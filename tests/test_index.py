@@ -4,7 +4,7 @@ from brainlib import cli, index
 def test_compile_lists_pages_by_folder(vault):
     index.compile(vault)
     out = (vault / "wiki/index.md").read_text(encoding="utf-8")
-    assert "## areas (1)" in out
+    assert "## contracts (1)" in out
     assert "- [[Contrato Grande]] (area, mature, 2026-06-01)" in out
     assert "hot" not in out.split("## ")[0].lower() or "[[hot]]" not in out
 
