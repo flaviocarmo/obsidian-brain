@@ -70,9 +70,21 @@ def build_prompt(vault: Path, items: list[dict]) -> str:
         "1. Leia o suficiente para entender o que a sessao fez (Read com limit/offset; "
         "transcripts grandes: comece pelo fim, que resume o desfecho).",
         "2. Escreva UMA pagina em wiki/journal/ nomeada 'Sessao YYYY-MM-DD <tema curto>.md' "
-        "(data da sessao). Frontmatter obrigatorio: type: source, title, created, updated, "
-        "tags, status: mature. Conteudo: o que foi feito, decisoes, fatos novos, pendencias "
+        "(data da sessao). Conteudo: o que foi feito, decisoes, fatos novos, pendencias "
         "que ficaram. Prosa objetiva, wikilinks [[Assim]] para paginas que ja existem.",
+        "",
+        "   FRONTMATTER EXATAMENTE NESTE FORMATO (o hook de validacao rejeita o resto):",
+        "   ---",
+        "   type: source",
+        "   title: \"Titulo Humano da Sessao\"",
+        "   created: YYYY-MM-DD",
+        "   updated: YYYY-MM-DD",
+        "   tags: [palavra, outra-palavra]",
+        "   status: mature",
+        "   ---",
+        "   REGRAS: tags SEM '#' (em YAML '#' abre comentario e quebra o bloco inteiro); "
+        "sem objetos aninhados; datas no formato YYYY-MM-DD; type e status apenas com os "
+        "valores acima. Nao acrescente 'permalink' (o basic-memory adiciona sozinho).",
         "3. Se ja existir pagina de sessao do mesmo dia sobre o mesmo trabalho, ATUALIZE-a "
         "em vez de criar outra (busque antes em wiki/journal/).",
         "4. Adicione UMA entrada no TOPO de wiki/log.md: '## [YYYY-MM-DD] digest | <titulo>' "

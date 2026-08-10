@@ -2,6 +2,15 @@
 
 All notable changes to this project are documented here. Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [SemVer](https://semver.org/).
 
+## [0.7.0] - 2026-08-10
+
+### Fixed
+- **Frontmatter validation now rejects YAML comment markers.** `#` outside quotes opens a comment, so `tags: [#deploy, #ci]` is a flow sequence that never closes. The regex reader accepted it; downstream YAML parsers did not, and basic-memory "repaired" the page by prepending a second frontmatter block, leaving three digest-generated pages with two stacked blocks and every required key reported missing. Detection walks the line tracking quote state (a quote may stay open across folded lines), so `title: "NF #1130"`, `issue #200` inside a quoted list item and `pagina#secao` all remain valid.
+- The digest prompt now pins the exact frontmatter schema, including the no-`#` rule. Unattended writes cannot rely on the model inferring the format.
+
+### Notes
+- Root cause of a real incident: the scheduled digest ran successfully (exit 0, 3 sessions consolidated) and produced three invalid pages that nobody was told about. The validator gap is the defect — fixing only the pages would have left tonight's run free to repeat it.
+
 ## [0.6.1] - 2026-08-09
 
 ### Fixed
@@ -70,6 +79,7 @@ Initial release.
 - Restricted-YAML frontmatter parser with folded-line support; UTF-8-safe subprocess handling for accented filenames.
 - 81 pytest tests, cp1252-console safe.
 
+[0.7.0]: https://github.com/flaviocarmo/obsidian-brain/compare/v0.6.1...v0.7.0
 [0.6.1]: https://github.com/flaviocarmo/obsidian-brain/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/flaviocarmo/obsidian-brain/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/flaviocarmo/obsidian-brain/compare/v0.4.0...v0.5.0

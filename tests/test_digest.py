@@ -74,3 +74,13 @@ def test_capture_hook_broken_event_is_silent(vault):
                        capture_output=True, text=True,
                        env=dict(os.environ, BRAIN_VAULT=str(vault)), timeout=30)
     assert r.returncode == 0
+
+
+def test_prompt_states_the_frontmatter_schema(vault, tmp_path):
+    """The digest writes unattended; if the prompt does not pin the schema the
+    model invents one and the pages land invalid."""
+    t = tmp_path / "t.jsonl"
+    t.write_text("{}", encoding="utf-8")
+    prompt = digest.build_prompt(vault, [{"session_id": "s", "transcript_path": str(t), "cwd": "c"}])
+    for required in ("type: source", "status: mature", "tags: [palavra", "SEM '#'"):
+        assert required in prompt

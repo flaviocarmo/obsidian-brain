@@ -90,3 +90,29 @@ def test_folded_scalar_concatenates():
 def test_true_nested_mapping_still_rejected():
     with pytest.raises(fm.FrontmatterError):
         fm.parse("related:\n  child: value\n")
+
+
+def test_hash_in_tags_is_rejected():
+    """'#' opens a YAML comment: `tags: [#a, #b]` is a sequence that never
+    closes. Real vault regression: basic-memory failed to parse and prepended
+    a second frontmatter block, breaking three digest-generated pages."""
+    with pytest.raises(fm.FrontmatterError):
+        fm.parse("tags: [#deploy, #kubernetes]")
+    with pytest.raises(fm.FrontmatterError):
+        fm.parse("tags:\n- #deploy")
+
+
+def test_hash_inside_quotes_is_allowed():
+    """Inside quotes '#' is literal YAML; rejecting it would block legitimate
+    titles like 'NF #1130'."""
+    assert fm.parse('title: "Custo #1 do projeto"')["title"] == "Custo #1 do projeto"
+    assert fm.parse("title: 'NF #1130 corrigida'")["title"] == "NF #1130 corrigida"
+
+
+def test_hash_mid_token_is_allowed():
+    assert fm.parse("permalink: work/wiki/pagina#secao")["permalink"] == "work/wiki/pagina#secao"
+
+
+def test_trailing_comment_is_rejected():
+    with pytest.raises(fm.FrontmatterError):
+        fm.parse("status: mature # revisar depois")

@@ -41,13 +41,45 @@ def _unquote(v: str) -> str:
     return v
 
 
+def _scan_line(line: str, open_quote: str | None) -> tuple[bool, str | None]:
+    """Walk the line tracking quote state, which may already be open from a
+    folded value. Returns (starts a comment, quote still open at end).
+
+    A '#' only opens a comment when it is outside quotes AND begins a token;
+    `pagina#secao` is literal, `issue #200` inside quotes is literal too.
+    """
+    prev = ""
+    for ch in line:
+        if open_quote is not None:
+            if ch == open_quote:
+                open_quote = None
+            prev = ch
+            continue
+        if ch in "'\"":
+            open_quote = ch
+        elif ch == "#" and (prev == "" or prev in " \t[,"):
+            return True, open_quote
+        prev = ch
+    return False, open_quote
+
+
 def parse(yaml_text: str) -> dict:
+    """Reject '#' outright: it opens a YAML comment, so `tags: [#a, #b]` is a
+    flow sequence that never closes. Our regex reader would happily accept it,
+    but the real YAML parsers downstream (basic-memory, Obsidian) fail and one
+    of them repairs the page by prepending a second frontmatter block."""
     meta: dict = {}
     current_list: str | None = None
     current_scalar: str | None = None
+    open_quote: str | None = None  # quote char still open from a folded line
     for raw in yaml_text.splitlines():
         if "\t" in raw:
             raise FrontmatterError("tab character in frontmatter")
+        has_comment, open_quote = _scan_line(raw, open_quote)
+        if has_comment:
+            raise FrontmatterError(
+                f"'#' starts a YAML comment and breaks the block: {raw.strip()!r} "
+                "(use plain tags: 'deploy', not '#deploy')")
         line = raw.rstrip()
         if not line.strip():
             continue
