@@ -52,8 +52,13 @@ def _fold(s: str) -> str:
 
 
 def title_tokens(stem: str) -> set[str]:
+    """Short tokens are dropped as noise EXCEPT when they carry a digit:
+    ordinals and counters ("3a", "5a", "dia-1", "v2") are usually the only
+    thing distinguishing two otherwise identical titles, so discarding them
+    makes distinct pages look like duplicates."""
     s = _SCAN_MARKER.sub("", _SESSION_PREFIX.sub("", _fold(stem)))
-    return {t for t in _WORD.findall(s) if len(t) > 2 and t not in STOPWORDS}
+    return {t for t in _WORD.findall(s)
+            if t not in STOPWORDS and (len(t) > 2 or any(c.isdigit() for c in t))}
 
 
 def similarity(a: set[str], b: set[str]) -> float:

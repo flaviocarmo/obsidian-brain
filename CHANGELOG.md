@@ -2,6 +2,11 @@
 
 All notable changes to this project are documented here. Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [SemVer](https://semver.org/).
 
+## [0.6.1] - 2026-08-09
+
+### Fixed
+- Duplicate detection discarded tokens of two characters or fewer, which silently removed the ordinals and counters (`3a`, `5a`, `dia-1`) that are often the *only* thing distinguishing two titles. Pages renamed precisely to disambiguate them still came back flagged at 100%. Tokens containing a digit are now always kept.
+
 ## [0.6.0] - 2026-08-09
 
 ### Added
@@ -65,6 +70,7 @@ Initial release.
 - Restricted-YAML frontmatter parser with folded-line support; UTF-8-safe subprocess handling for accented filenames.
 - 81 pytest tests, cp1252-console safe.
 
+[0.6.1]: https://github.com/flaviocarmo/obsidian-brain/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/flaviocarmo/obsidian-brain/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/flaviocarmo/obsidian-brain/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/flaviocarmo/obsidian-brain/compare/v0.3.0...v0.4.0

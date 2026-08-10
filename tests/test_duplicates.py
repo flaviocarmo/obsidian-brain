@@ -78,3 +78,20 @@ def test_lint_reports_duplicates_as_info(vault):
         (vault / "wiki" / "journal" / name).write_text(fm, encoding="utf-8")
     dups = [f for f in lint.run(vault) if "duplicata" in f.message]
     assert len(dups) == 1 and dups[0].severity == "info"
+
+
+def test_digit_tokens_survive_and_distinguish_titles():
+    """Ordinals are often the only discriminator; dropping them as 'short'
+    made renamed-but-distinct pages look identical (real vault regression)."""
+    a = duplicates.title_tokens("Sessao 2026-05-09 email-scan-deltas-3a-execucao")
+    b = duplicates.title_tokens("Sessao 2026-05-09 email-scan-deltas-5a-execucao")
+    assert "3a" in a and "5a" in b
+    assert duplicates.similarity(a, b) < duplicates.SIMILARITY_THRESHOLD
+
+
+def test_renamed_series_no_longer_flagged():
+    pages = [_p("journal/Sessao 2026-05-27 email-scan-gap-corp-dia-1.md"),
+             _p("journal/Sessao 2026-06-01 email-scan-gap-corp-dia-6.md"),
+             _p("journal/Sessao 2026-06-03 email-scan-gap-corp-4a-execucao.md"),
+             _p("journal/Sessao 2026-06-04 email-scan-gap-corp-5a-execucao.md")]
+    assert duplicates.find(pages) == []
