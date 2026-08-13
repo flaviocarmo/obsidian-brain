@@ -1,6 +1,7 @@
 {
   "name": "obsidian-brain-marketplace",
   "owner": { "name": "Flavio Carmo" },
+  "description": "Second brain em vault Obsidian com validacao por hook, retrieval via basic-memory e consolidacao diaria de sessoes. Claude Code e Codex CLI.",
   "plugins": [
     {
       "name": "obsidian-brain",
