@@ -44,6 +44,49 @@ The `BRAIN_VAULT` environment variable overrides the file when set. Start a new 
 
 Check the install with `python <plugin>/scripts/brain.py doctor` — it verifies Python, the vault, the hooks, and that basic-memory is installed **and** has a project indexing your vault. Exit code 1 means a requirement is missing.
 
+### Make every session read the vault (global CLAUDE.md)
+
+Installing the plugin loads the skills, but nothing tells Claude *when* the vault
+is worth consulting — skills fire on their triggers, and "should I check the
+second brain before answering this?" is not one of them. Paste this into
+`~/.claude/CLAUDE.md` (adjust the path and the project list):
+
+```markdown
+## Vault Obsidian — Second Brain
+
+- **Path**: `C:\path\to\YourVault` (plugin `obsidian-brain`). Schema, taxonomy and
+  editing rules live in the vault's own `CLAUDE.md`.
+- **Read before acting** on anything touching infrastructure, architectural
+  decisions, technology comparisons or the project portfolio: `wiki/hot.md` first,
+  then search via basic-memory (project `<name>`), then `brain extract --toc/--heading`
+  on a large page. Never load `wiki/index.md` or `wiki/log.md` whole. Skip the
+  lookup only for strictly theoretical questions.
+- **Write** on "save to the vault" / "/save" and similar — the `save` skill decides
+  type, folder and format; the hooks validate and recompile the index.
+```
+
+Two details that make the difference between a rule that works and one that gets
+ignored: name the **trigger** ("before tasks touching X"), not the tool, and state
+the **prohibition** about `index.md`/`log.md` — without it a model eventually loads
+a 130k-token catalog into context and blames the vault for being slow.
+
+### Codex CLI
+
+Most of the plugin ports over; the write-validation hooks are the exception.
+Verified against `codex-cli 0.147.0`:
+
+| Piece | Status on Codex |
+|---|---|
+| Skills (`query`, `save`, `ingest`, `lint`, `fold`, `hot-cache`) | **Work as-is.** Copy `skills/*` to `~/.agents/skills/` (Codex's user scope; repo scope is `.agents/skills`). Same `name`/`description` frontmatter. Invoke with `$save`, or let the description match. |
+| `brain.py` CLI | **Works as-is.** Pure stdlib; `--vault` or `BRAIN_VAULT` instead of `~/.claude/brain.json`. |
+| Search (basic-memory) | `codex mcp add basic-memory -- basic-memory mcp`. |
+| Session capture (`Stop` hook) | **Works as-is.** Codex sends the same fields (`session_id`, `transcript_path`, `cwd`) on stdin. Register in `~/.codex/hooks.json`. |
+| Write validation + index recompile (`PostToolUse`) | **Needs an adapter.** Codex fires `PostToolUse` for `apply_patch`, but the payload carries `tool_input.command` (the patch text), not `tool_input.file_path` — the hooks have to parse the touched paths out of the patch. Everything else matches, including `{"decision": "block", "reason": ...}` and `additionalContext`. |
+
+The vault's contract lives in its `CLAUDE.md`; Codex reads `AGENTS.md`, so either
+symlink one to the other or keep a short `AGENTS.md` in the vault root pointing at
+it. The global equivalent of the snippet above goes in `~/.codex/AGENTS.md`.
+
 ### Vault layout (data-derived taxonomy)
 
 Structure follows the data, not note kinds (note kind already lives in frontmatter `type`):
