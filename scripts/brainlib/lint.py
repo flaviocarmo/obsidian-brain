@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
 
-from . import conflicts, duplicates, endpoints, extract, frontmatter, validate
+from . import conflicts, duplicates, endpoints, extract, frontmatter, hygiene, validate
 
 _WIKILINK = re.compile(r"\[\[([^\]\|#]+)")
 _STALE = re.compile(r"\[!stale\]", re.IGNORECASE)
@@ -77,6 +77,11 @@ def run(vault: Path) -> list[Finding]:
                     f"bloated page: ~{tokens} tokens (limite {BLOATED_PAGE_TOKENS}); "
                     f'seções: brain extract "{p.stem}" --toc — '
                     f'corte: brain split "{p.stem}" --heading "<seção>" [--apply]'))
+
+        if not rel.startswith("wiki/contracts/"):
+            noise = hygiene.score(body)
+            if noise.score >= hygiene.REPORT_AT:
+                findings.append(Finding("info", rel, noise.message()))
 
         lines = body.splitlines()
         heads = extract.iter_headings(body)
