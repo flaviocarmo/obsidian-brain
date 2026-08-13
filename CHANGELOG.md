@@ -2,6 +2,16 @@
 
 All notable changes to this project are documented here. Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [SemVer](https://semver.org/).
 
+## [0.10.0] - 2026-08-13
+
+### Added
+- **The compiled index doubles as a per-topic map.** Headings now follow the full folder path (`## domains/infra (28)`) instead of only the top level, so `brain extract index --heading "domains/infra (28)"` returns one theme for ~600 tokens. Before, the smallest loadable slice of `domains` was a single 5.2k-token block mixing infrastructure with business and platforms — which meant the cheapest way to get the infra map was to load everything, and the honest advice was to load nothing.
+- **`brain lint` flags bloated pages** (info, >12k estimated tokens, `contracts/` excluded since ledgers are long by design). A page nobody can scan is a page nobody updates, and it drags the whole file into context when one section was wanted.
+- **Host → address drift detection** (`brainlib/endpoints.py`, warning). The existing contradiction check joins pages on strong identifiers; a whole class of fact has none and drifts silently — `dbt8` at one address here and another there after a host is rebuilt. It reports both sides with their `updated` dates and never picks a winner.
+
+### Notes
+- The drift rule is deliberately narrow, because a noisy linter teaches people to ignore the linter. Session pages (`type: source`) are excluded — a dated record saying "dbt6 was 20.0.0.31" stays true forever. A line needs a single address, stated the way an address is stated (backticks, a port, an `@`, a URL, or wording about hosts), and a name within 80 characters of it. First run against a 564-page vault produced 7 findings of which ~5 were junk: version strings like `1.1.0.15` parsing as IPv4, and `v8`/`e2e`/`route53` picked up as hostnames. With the rule tightened it reports **zero** — and a mutation test (injecting `dbt8` at a wrong address into the real page set) still catches it, which is the check that separates a precise rule from a dead one.
+
 ## [0.9.0] - 2026-08-13
 
 ### Added

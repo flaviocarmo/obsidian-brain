@@ -5,10 +5,13 @@ from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
 
-from . import conflicts, duplicates, extract, frontmatter, validate
+from . import conflicts, duplicates, endpoints, extract, frontmatter, validate
 
 _WIKILINK = re.compile(r"\[\[([^\]\|#]+)")
 _STALE = re.compile(r"\[!stale\]", re.IGNORECASE)
+# Roughly a fifth of a 60k-token budget: past this a page stops being readable
+# in one pass and starts being extracted section by section anyway.
+BLOATED_PAGE_TOKENS = 12000
 
 
 @dataclass
@@ -62,6 +65,18 @@ def run(vault: Path) -> list[Finding]:
             else:
                 findings.append(Finding("warning", rel, f"dead wikilink: [[{target.strip()}]]"))
 
+        # A page nobody can scan is a page nobody updates, and it drags the
+        # whole thing into context when one section was wanted. Ledgers in
+        # contracts/ are long by design (they are chronological records), so
+        # only knowledge pages are measured.
+        if not rel.startswith("wiki/contracts/"):
+            tokens = extract.estimate_tokens(body)
+            if tokens > BLOATED_PAGE_TOKENS:
+                findings.append(Finding(
+                    "info", rel,
+                    f"bloated page: ~{tokens} tokens (limite {BLOATED_PAGE_TOKENS}); "
+                    "considere dividir por seção ou destilar"))
+
         lines = body.splitlines()
         heads = extract.iter_headings(body)
         for idx, (i, level, title) in enumerate(heads):
@@ -102,6 +117,11 @@ def run(vault: Path) -> list[Finding]:
     # cross-page contradictions: same identifier, incompatible claims
     for c in conflicts.find(rels):
         findings.append(Finding("warning", c.mentions[0].page, c.message()))
+
+    # host -> address drift: the class of fact with no strong identifier
+    for d in endpoints.find(rels):
+        first = next(iter(d.values.values()))[0]
+        findings.append(Finding("warning", first.page, d.message()))
 
     # near-duplicate pages: two pages that should probably be one
     for d in duplicates.find(rels):

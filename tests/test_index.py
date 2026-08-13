@@ -9,6 +9,22 @@ def test_compile_lists_pages_by_folder(vault):
     assert "hot" not in out.split("## ")[0].lower() or "[[hot]]" not in out
 
 
+def test_subfolders_get_their_own_heading(vault):
+    """One `domains` heading is a single block mixing every subject: the
+    cheapest way to load the infra map was to load all of it. Per-subfolder
+    headings make `extract --heading` able to pull one theme."""
+    (vault / "wiki/domains/infra").mkdir(parents=True, exist_ok=True)
+    (vault / "wiki/domains/geo").mkdir(parents=True, exist_ok=True)
+    (vault / "wiki/domains/infra/Kubernetes.md").write_text(
+        '---\ntype: concept\ntitle: "Kubernetes"\nstatus: mature\n---\ncorpo', encoding="utf-8")
+    (vault / "wiki/domains/geo/GeoServer.md").write_text(
+        '---\ntype: concept\ntitle: "GeoServer"\nstatus: mature\n---\ncorpo', encoding="utf-8")
+    index.compile(vault)
+    out = (vault / "wiki/index.md").read_text(encoding="utf-8")
+    assert "## domains/infra (1)" in out and "## domains/geo (1)" in out
+    assert "## domains (2)" not in out
+
+
 def test_compile_skips_folds(vault):
     (vault / "wiki/folds/arquivo-velho.md").write_text(
         "---\ntype: meta\ntitle: \"X\"\n---\ncorpo", encoding="utf-8"
