@@ -272,6 +272,22 @@ def run(vault: Path, model: str = DEFAULT_MODEL, dry_run: bool = False,
                f"{proc.stdout.strip()[-600:]}")
 
 
+def refresh_models(vault: Path) -> str:
+    """Keep the standing answers current, a couple per night.
+
+    A mental model is only worth reading if it is trustworthy, and it is only
+    trustworthy if something keeps it current — but a vault with twenty
+    questions must not turn one nightly run into twenty model calls. Models
+    whose evidence did not change cost nothing.
+    """
+    try:
+        from . import models as models_mod
+        out = models_mod.refresh(vault)
+        return "models: " + ("; ".join(out) if out else "nada a atualizar")
+    except (OSError, ValueError) as e:
+        return f"models: falhou ({e})"
+
+
 def fold_log_if_needed(vault: Path) -> str:
     """Keep log.md bounded without anyone remembering to do it.
 

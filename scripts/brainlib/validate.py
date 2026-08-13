@@ -10,7 +10,7 @@ from pathlib import Path
 from . import frontmatter
 
 TYPES = {"source", "entity", "concept", "domain", "comparison", "question",
-         "overview", "meta", "area", "goal", "person", "decision", "runbook"}
+         "overview", "meta", "area", "goal", "person", "decision", "runbook", "model"}
 # A runbook is the one page kind read while something is broken, so it is the
 # one kind worth validating structurally. These three sections are what turns
 # a narrative into a procedure someone else can execute: when it applies, what
@@ -62,6 +62,22 @@ def check_schema(meta: dict) -> list[str]:
         errors.append(f"updated is not YYYY-MM-DD: {meta['updated']!r}")
     if created and updated and updated < created:
         errors.append(f"updated {updated} before created {created}")
+    return errors
+
+
+def check_model(meta: dict, text: str) -> list[str]:
+    """A mental model without its question is just a page.
+
+    The question is the contract: you own it, the nightly refresh owns the
+    body. Losing it in a rewrite would leave a file nobody knows how to
+    regenerate."""
+    errors = []
+    question = str(meta.get("question", "")).strip()
+    if not question:
+        errors.append("model sem 'question' no frontmatter: e a pergunta que define o arquivo")
+    _, body = frontmatter.split(text)
+    if len(body.strip()) < 40:
+        errors.append("model sem corpo: rode 'brain models --refresh'")
     return errors
 
 
@@ -243,6 +259,8 @@ def validate_file(vault: Path, path: Path, by_brain: bool = False) -> Report:
     r.errors += check_schema(meta)
     if str(meta.get("type", "")) == "runbook":
         r.errors += check_runbook(text)
+    if str(meta.get("type", "")) == "model":
+        r.errors += check_model(meta, text)
     if name.startswith(("contracts/", "areas/")):
         r.warnings += check_ledger_chronology(text)
     return r

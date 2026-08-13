@@ -7,8 +7,8 @@ description: Responder perguntas a partir do vault Obsidian (second brain). Use 
 
 Responda a partir do vault, sem modificar nenhum arquivo dele.
 
-1. Leia `wiki/hot.md` (contexto recente, barato).
-2. Busque com basic-memory (**requisito**, é a camada de busca): tool MCP `search_notes`; sem MCP, CLI `basic-memory tool search-notes --query "<termos>"`.
+1. Leia `wiki/hot.md` (contexto recente, barato). Se a pergunta tem um **mental model** em `wiki/models/`, leia-o: é resposta permanente já escrita, sem custo de retrieval.
+2. Busque com `brain recall "<pergunta>"` — funde busca semântica (basic-memory), busca por título e **grep por identificador forte** (NF/OS/Fatura, IP, host) com reciprocal rank fusion. Use o MCP `search_notes` direto só quando quiser filtrar por tag/status/data. Identificador exato é onde o vetor erra: a página que diz `NF 1142` estava em 7º na busca semântica e é 1ª no recall.
    Se o basic-memory não responder, **avise o usuário e rode `brain doctor`** antes de continuar. Grep é degradação temporária, não o caminho normal: a resposta fica pior sem sinal.
 3. NUNCA carregue `wiki/index.md` ou `wiki/log.md` inteiros; log só via `grep "^## \[" wiki/log.md`. Precisa do mapa de UM tema? `brain extract index --toc` e depois `--heading "<pasta> (<n>)"` — uma subpasta custa uma fração do arquivo.
    **Pergunta operacional ("como faço X", "X quebrou, e agora")**: olhe `wiki/runbooks/` PRIMEIRO (`type: runbook` tem passos e verificação prontos). Página de sessão narra o incidente; runbook executa.

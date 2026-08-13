@@ -41,6 +41,15 @@ def build_parser() -> argparse.ArgumentParser:
                      help="do not refresh wiki/hot.md after consolidating")
     cdx = sub.add_parser("install-codex", help="copy skills and hooks into Codex CLI")
     cdx.add_argument("--dry-run", action="store_true")
+    mdl = sub.add_parser("models", help="mental models: standing answers kept current")
+    mdl.add_argument("--question", default=None, help="create a new mental model for this question")
+    mdl.add_argument("--refresh", action="store_true")
+    mdl.add_argument("--limit", type=int, default=2)
+    mdl.add_argument("--force", action="store_true")
+    rec = sub.add_parser("recall", help="multi-route retrieval fused with RRF")
+    rec.add_argument("query")
+    rec.add_argument("--top", type=int, default=8)
+    rec.add_argument("--json", action="store_true")
     sec = sub.add_parser("secrets", help="inventory of credentials in the vault (masked, read-only)")
     sec.add_argument("--json", action="store_true")
     spl = sub.add_parser("split", help="move a section out of a page that got too big")
@@ -150,6 +159,13 @@ def main(argv: list[str] | None = None) -> int:
             from . import digest as digest_mod
             vault = config.vault_path(args.vault)
             return digest_mod.main_cli(vault, args.model, args.dry_run, args.skip_hot)
+        if args.command == "models":
+            from . import models as models_mod
+            return models_mod.main_cli(config.vault_path(args.vault), args.question,
+                                       args.refresh, args.limit, args.force)
+        if args.command == "recall":
+            from . import recall as recall_mod
+            return recall_mod.main_cli(config.vault_path(args.vault), args.query, args.top, args.json)
         if args.command == "secrets":
             from . import secrets as secrets_mod
             return secrets_mod.main_cli(config.vault_path(args.vault), args.json)

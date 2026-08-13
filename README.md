@@ -18,6 +18,8 @@ LLM-maintained knowledge bases fail in predictable ways: the hot-context file gr
 - **Address drift detection.** Some facts have no identifier to join on: a host answers at one address in one page and another elsewhere after a rebuild, and the wrong one gets pasted into a command months later. Host→address pairs are compared across pages that claim current truth (dated session pages are excluded — they describe a moment). Narrow on purpose: a noisy linter teaches you to ignore the linter.
 - **Section extractor for big pages, and a per-topic map.** Real vaults grow 250 KB ledger pages. `brain extract` returns a token-estimated table of contents, then just the section you ask for, fence-aware (headings inside code blocks are not headings). The compiled index is grouped by full folder path, so `extract index --heading "domains/infra (28)"` is a thematic map for ~600 tokens instead of a 5k-token block covering every domain.
 - **Runbooks that are checked, not just filed.** `type: runbook` requires *when to use*, *steps* and — the section every informal runbook omits — *verification*, enforced by the validator. It is the one page kind read while something is broken, so it is the one worth validating beyond frontmatter.
+- **Retrieval by several routes.** `brain recall` fuses semantic search, title match and deterministic grep for strong identifiers (invoice numbers, hosts, addresses) with reciprocal rank fusion — the exact token is precisely what an embedding blurs.
+- **Mental models.** A question you declare once, whose answer the nightly run keeps current. Reading it is a file read: no retrieval, no LLM call, no waiting.
 - **Search stays external, and required.** basic-memory indexes the vault locally (FTS + vector, zero LLM tokens); this plugin implements what comes after search, not search itself. `brain doctor` fails loudly when it is missing, because silent degradation to grep is worse than an error.
 - **Everything deterministic is code with tests.** 188 pytest tests, Windows-native, cp1252-console safe, pure stdlib.
 
@@ -181,6 +183,8 @@ python <plugin>/scripts/brain.py compile-index
 python <plugin>/scripts/brain.py hot-check
 python <plugin>/scripts/brain.py fold            # dry-run; add --apply to execute
 python <plugin>/scripts/brain.py split "Some Big Page" --heading "Section"  # dry-run; --apply cuts
+python <plugin>/scripts/brain.py recall "NF 1142"   # semantic + title + identifier grep, RRF-fused
+python <plugin>/scripts/brain.py models --refresh   # rewrite the standing answers
 python <plugin>/scripts/brain.py secrets         # masked inventory of credentials (rotation aid)
 python <plugin>/scripts/brain.py doctor          # check requirements (basic-memory included)
 ```
