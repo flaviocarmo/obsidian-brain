@@ -268,7 +268,32 @@ def run(vault: Path, model: str = DEFAULT_MODEL, dry_run: bool = False,
                refresh_hot(vault, journal_pages_touched_since(vault, started),
                            claude_cmd=claude_cmd))
     return 0, (f"digest: {len(items)} session(s) digested{stray_msg}\n{hot_msg}\n"
-               f"{recompile_index(vault)}\n{proc.stdout.strip()[-600:]}")
+               f"{fold_log_if_needed(vault)}\n{recompile_index(vault)}\n"
+               f"{proc.stdout.strip()[-600:]}")
+
+
+def fold_log_if_needed(vault: Path) -> str:
+    """Keep log.md bounded without anyone remembering to do it.
+
+    The digest appends an entry every night; `brain fold` was manual. Anything
+    that only grows and is only trimmed by hand grows forever — this vault
+    reached 53k tokens of log that way. Archiving is mechanical (no LLM) and
+    the apply keeps a backup, so it belongs in the nightly run.
+    """
+    try:
+        from . import extract, fold as fold_mod
+        log = vault / "wiki" / "log.md"
+        if not log.is_file():
+            return "log: ausente"
+        tokens = extract.estimate_tokens(log.read_text(encoding="utf-8"))
+        if tokens <= fold_mod.MAX_LOG_TOKENS:
+            return f"log: ~{tokens} tokens, dentro do teto"
+        fp = fold_mod.plan(vault)
+        fold_mod.apply(vault, fp)
+        after = extract.estimate_tokens(log.read_text(encoding="utf-8"))
+        return f"log: {fp.summary()} (~{tokens} -> ~{after} tokens)"
+    except (OSError, ValueError) as e:
+        return f"log: fold falhou ({e})"
 
 
 def recompile_index(vault: Path) -> str:

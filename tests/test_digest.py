@@ -225,3 +225,37 @@ def test_prompt_states_the_frontmatter_schema(vault, tmp_path):
     prompt = digest.build_prompt(vault, [{"session_id": "s", "transcript_path": str(t), "cwd": "c"}])
     for required in ("type: source", "status: mature", "tags: [palavra", "SEM '#'"):
         assert required in prompt
+
+
+def test_run_folds_the_log_when_it_outgrows_the_cap(vault, tmp_path, monkeypatch):
+    """The digest appends every night and fold was manual: anything that only
+    grows and is trimmed by hand grows forever (this vault hit 53k tokens)."""
+    from brainlib import fold as fold_mod
+    t = tmp_path / "t.jsonl"
+    t.write_text("{}", encoding="utf-8")
+    _enqueue(vault, "s1", t)
+    entries = "".join(
+        f"## [2026-06-{d:02d}] Entrada {d}\n\n" + ("texto " * 500) + "\n\n" for d in range(28, 0, -1))
+    (vault / "wiki/log.md").write_text(
+        '---\ntype: meta\ntitle: "Log"\nupdated: 2026-06-28\n---\n\n# Operations Log\n\n' + entries,
+        encoding="utf-8")
+    monkeypatch.setattr(fold_mod, "MAX_LOG_TOKENS", 3000)
+    monkeypatch.setattr(digest.subprocess, "run",
+                        lambda cmd, **kw: subprocess.CompletedProcess(cmd, 0, stdout="ok", stderr=""))
+    rc, msg = digest.run(vault, skip_hot=True)
+    assert rc == 0 and "log:" in msg
+    from brainlib import extract
+    assert extract.estimate_tokens((vault / "wiki/log.md").read_text(encoding="utf-8")) <= 3000
+    assert list((vault / "wiki/folds").glob("log-archive-*.md"))
+
+
+def test_run_leaves_a_small_log_alone(vault, tmp_path, monkeypatch):
+    t = tmp_path / "t.jsonl"
+    t.write_text("{}", encoding="utf-8")
+    _enqueue(vault, "s1", t)
+    before = (vault / "wiki/log.md").read_text(encoding="utf-8")
+    monkeypatch.setattr(digest.subprocess, "run",
+                        lambda cmd, **kw: subprocess.CompletedProcess(cmd, 0, stdout="ok", stderr=""))
+    rc, msg = digest.run(vault, skip_hot=True)
+    assert rc == 0 and "dentro do teto" in msg
+    assert (vault / "wiki/log.md").read_text(encoding="utf-8") == before

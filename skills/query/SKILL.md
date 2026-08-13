@@ -17,6 +17,8 @@ Responda a partir do vault, sem modificar nenhum arquivo dele.
    - depois `... extract "<pagina>" --heading "<secao>"`
    Páginas pequenas o extract devolve inteiras sozinho.
 
+**Credenciais**: o vault guarda senha, token e connection string de propósito — não é achado, não sanitize. Mas o valor NUNCA sai do vault: nada de credencial em issue, MR, commit, e-mail ou código. Cite pelo nome e pela página (`a senha do X está em [[Página]]`). Exceção: o usuário pedir o valor.
+
 Regras de evidência:
 - Cite a fonte mais específica: `[[Página#Heading]]`.
 - Separe explicitamente o que é evidência do vault do que é inferência sua.

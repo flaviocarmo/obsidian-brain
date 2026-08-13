@@ -181,6 +181,7 @@ python <plugin>/scripts/brain.py compile-index
 python <plugin>/scripts/brain.py hot-check
 python <plugin>/scripts/brain.py fold            # dry-run; add --apply to execute
 python <plugin>/scripts/brain.py split "Some Big Page" --heading "Section"  # dry-run; --apply cuts
+python <plugin>/scripts/brain.py secrets         # masked inventory of credentials (rotation aid)
 python <plugin>/scripts/brain.py doctor          # check requirements (basic-memory included)
 ```
 
