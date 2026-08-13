@@ -23,6 +23,7 @@ from pathlib import Path
 
 SKILLS = ("query", "save", "ingest", "lint", "fold", "hot-cache")
 PREFIX = "obsidian-brain-"
+MANIFEST = ".obsidian-brain-install.json"
 
 
 def skills_dir() -> Path:
@@ -31,6 +32,40 @@ def skills_dir() -> Path:
 
 def hooks_file() -> Path:
     return Path.home() / ".codex" / "hooks.json"
+
+
+def repo_version(repo: Path) -> str | None:
+    try:
+        return json.loads((repo / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8"))["version"]
+    except (OSError, json.JSONDecodeError, KeyError):
+        return None
+
+
+def manifest_path() -> Path:
+    return skills_dir() / MANIFEST
+
+
+def read_manifest() -> dict:
+    """What the last install-codex put on disk, or {} if never installed.
+
+    Codex runs from copies, and a copy has no way of announcing that it is
+    three versions behind — the skills keep working, just the old way. This
+    file is what makes the drift detectable.
+    """
+    try:
+        return json.loads(manifest_path().read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+
+
+def write_manifest(repo: Path, python: str, skills: list[str]) -> None:
+    manifest_path().parent.mkdir(parents=True, exist_ok=True)
+    manifest_path().write_text(json.dumps({
+        "version": repo_version(repo),
+        "repo": str(repo),
+        "python": python,
+        "skills": skills,
+    }, indent=2), encoding="utf-8")
 
 
 def _rewrite_skill(text: str, repo: Path, name: str) -> str:
@@ -136,6 +171,8 @@ def main_cli(vault: Path, dry_run: bool = False) -> int:
     python = sys.executable
     names = install_skills(repo, dry_run)
     path = install_hooks(repo, python, dry_run)
+    if not dry_run:
+        write_manifest(repo, python, names)
     prefix = "would install" if dry_run else "installed"
     print(f"{prefix} skills: {', '.join(names)} -> {skills_dir()}")
     print(f"{prefix} hooks -> {path}")

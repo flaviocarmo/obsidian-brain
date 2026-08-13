@@ -63,6 +63,63 @@ def test_post_tool_use_matches_apply_patch():
     assert codex_install.build_hooks(Path("/repo"), "py")["PostToolUse"][0]["matcher"] == "apply_patch"
 
 
+def _isolate(tmp_path, monkeypatch):
+    monkeypatch.setattr(codex_install, "skills_dir", lambda: tmp_path / "skills")
+    monkeypatch.setattr(codex_install, "hooks_file", lambda: tmp_path / "hooks.json")
+    monkeypatch.setattr(codex_install, "manifest_path", lambda: tmp_path / "skills" / codex_install.MANIFEST)
+
+
+def test_manifest_records_what_was_installed(tmp_path, monkeypatch):
+    """A copy cannot say it is outdated; the manifest is what makes the drift
+    detectable at all."""
+    _isolate(tmp_path, monkeypatch)
+    names = codex_install.install_skills(REPO, dry_run=False)
+    codex_install.write_manifest(REPO, "py", names)
+    m = codex_install.read_manifest()
+    assert m["version"] == codex_install.repo_version(REPO)
+    assert m["repo"] == str(REPO) and m["skills"] == names
+
+
+def test_read_manifest_without_install_is_empty(tmp_path, monkeypatch):
+    _isolate(tmp_path, monkeypatch)
+    assert codex_install.read_manifest() == {}
+
+
+def test_doctor_flags_stale_codex_copies(tmp_path, monkeypatch):
+    from brainlib import doctor
+    _isolate(tmp_path, monkeypatch)
+    monkeypatch.setattr(doctor.Path, "home", staticmethod(lambda: tmp_path))
+    (tmp_path / ".codex").mkdir()
+    (tmp_path / "skills").mkdir()
+    codex_install.manifest_path().write_text(
+        json.dumps({"version": "0.0.1", "repo": str(REPO)}), encoding="utf-8")
+    c = doctor.check_codex()
+    assert not c.ok and not c.fatal
+    assert "0.0.1" in c.detail and "install-codex" in c.detail
+
+
+def test_doctor_quiet_when_codex_absent(tmp_path, monkeypatch):
+    from brainlib import doctor
+    _isolate(tmp_path, monkeypatch)
+    monkeypatch.setattr(doctor.Path, "home", staticmethod(lambda: tmp_path))
+    c = doctor.check_codex()
+    assert c.ok and not c.fatal and "nao instalado" in c.detail
+
+
+def test_doctor_flags_hooks_pointing_at_another_clone(tmp_path, monkeypatch):
+    from brainlib import doctor
+    _isolate(tmp_path, monkeypatch)
+    monkeypatch.setattr(doctor.Path, "home", staticmethod(lambda: tmp_path))
+    (tmp_path / ".codex").mkdir()
+    (tmp_path / "skills").mkdir()
+    codex_install.manifest_path().write_text(
+        json.dumps({"version": codex_install.repo_version(REPO), "repo": str(REPO)}), encoding="utf-8")
+    codex_install.hooks_file().write_text(json.dumps({"hooks": {"Stop": [{"hooks": [
+        {"type": "command", "command": '"py" "/outro/clone/hooks/capture-session.py"'}]}]}}), encoding="utf-8")
+    c = doctor.check_codex()
+    assert not c.ok and "apontando para outro caminho" in c.detail
+
+
 def test_dry_run_touches_nothing(tmp_path, monkeypatch):
     monkeypatch.setattr(codex_install, "skills_dir", lambda: tmp_path / "skills")
     monkeypatch.setattr(codex_install, "hooks_file", lambda: tmp_path / "hooks.json")

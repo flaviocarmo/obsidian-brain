@@ -108,6 +108,49 @@ def check_hooks() -> Check:
     return Check("hooks", True, "validate-write, recompile-index, capture-session")
 
 
+def check_codex() -> Check:
+    """Are the Codex copies still the ones this repo would produce?
+
+    Claude Code loads the plugin from the repo, so `git pull` upgrades it.
+    Codex runs from copies in ~/.agents/skills and ~/.codex/hooks.json, and a
+    copy never announces that it is behind: the skills keep working, the old
+    way, and the hooks keep pointing at whatever path they were installed with.
+    Not having Codex at all is fine; having a stale install is what needs to be
+    said out loud. Never fatal — Codex is optional.
+    """
+    from . import codex_install
+    repo = Path(__file__).resolve().parents[2]
+    version = codex_install.repo_version(repo) or "?"
+    if not (Path.home() / ".codex").is_dir():
+        return Check("codex", True, "nao instalado nesta maquina (ok)", fatal=False)
+    manifest = codex_install.read_manifest()
+    if not manifest:
+        return Check("codex", False, "Codex presente mas o plugin nao foi instalado la: "
+                                     "rode 'brain install-codex'", fatal=False)
+    problems = []
+    if manifest.get("version") != version:
+        problems.append(f"copias na {manifest.get('version') or '?'}, repo na {version}")
+    if manifest.get("repo") and Path(manifest["repo"]) != repo:
+        problems.append(f"instaladas a partir de outro clone ({manifest['repo']})")
+    stale_hooks = []
+    try:
+        hooks = json.loads(codex_install.hooks_file().read_text(encoding="utf-8"))
+        for groups in hooks.get("hooks", {}).values():
+            for group in groups:
+                for handler in group.get("hooks", []):
+                    cmd = handler.get("command", "")
+                    if codex_install._is_ours(cmd) and str(repo) not in cmd:
+                        stale_hooks.append(cmd)
+    except (OSError, json.JSONDecodeError):
+        pass
+    if stale_hooks:
+        problems.append(f"{len(stale_hooks)} hook(s) apontando para outro caminho")
+    if problems:
+        return Check("codex", False, "; ".join(problems) + " — rode 'brain install-codex' "
+                     "e revise em /hooks (mudanca de hook reseta a confianca)", fatal=False)
+    return Check("codex", True, f"skills e hooks na {version}", fatal=False)
+
+
 def run(cli_override: str | None = None) -> tuple[int, str]:
     checks = [check_python()]
     vault_check, vault = check_vault(cli_override)
@@ -117,6 +160,7 @@ def run(cli_override: str | None = None) -> tuple[int, str]:
     if bm.ok:
         checks.append(check_basic_memory_project(vault))
     checks.append(check_hooks())
+    checks.append(check_codex())
 
     lines = [c.line() for c in checks]
     failed = [c for c in checks if not c.ok and c.fatal]
