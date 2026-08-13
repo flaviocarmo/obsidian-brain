@@ -129,17 +129,36 @@ def _log_state_path(vault: Path) -> Path:
     return vault / ".vault-meta" / "log-state.json"
 
 
+LOG_STATE_VERSION = 2
+
+
 def _body_of(text: str) -> bytes:
     _, body = frontmatter.split(text)
     return body.encode("utf-8")
 
 
+def _log_entries_of(text: str) -> bytes:
+    """Everything from the first '## ' heading on.
+
+    The comparison has to skip the file's fixed prologue (the `# Operations
+    Log` title and anything above the first entry): prepending an entry below
+    a title means the old *body* is no longer a suffix of the new one, so
+    hashing the whole body flagged every legitimate append as tampering.
+    """
+    _, body = frontmatter.split(text)
+    if body.startswith("## "):
+        return body.encode("utf-8")
+    i = body.find("\n## ")
+    return b"" if i == -1 else body[i + 1:].encode("utf-8")
+
+
 def update_log_state(vault: Path, text: str) -> None:
-    body = _body_of(text)
+    entries = _log_entries_of(text)
     p = _log_state_path(vault)
     p.parent.mkdir(parents=True, exist_ok=True)
     p.write_text(
-        json.dumps({"length": len(body), "sha256": hashlib.sha256(body).hexdigest()}),
+        json.dumps({"version": LOG_STATE_VERSION, "length": len(entries),
+                    "sha256": hashlib.sha256(entries).hexdigest()}),
         encoding="utf-8",
     )
 
@@ -152,14 +171,18 @@ def check_log(vault: Path, text: str, by_brain: bool) -> list[str]:
     try:
         state = json.loads(sp.read_text(encoding="utf-8"))
         old_len, old_hash = int(state["length"]), state["sha256"]
+        version = int(state.get("version", 1))
     except (OSError, json.JSONDecodeError, KeyError, ValueError):
         update_log_state(vault, text)
         return []
-    body = _body_of(text)
-    # body[-old_len:] misbehaves when old_len == 0 (Python slicing treats -0
+    if version != LOG_STATE_VERSION:
+        update_log_state(vault, text)  # state written by an older format: re-baseline, never block
+        return []
+    entries = _log_entries_of(text)
+    # entries[-old_len:] misbehaves when old_len == 0 (Python slicing treats -0
     # as 0, returning the whole body instead of an empty prefix), which would
-    # falsely block the very first append to an empty-bodied log.
-    if len(body) >= old_len and hashlib.sha256(body[len(body) - old_len:]).hexdigest() == old_hash:
+    # falsely block the very first append to a log with no entries yet.
+    if len(entries) >= old_len and hashlib.sha256(entries[len(entries) - old_len:]).hexdigest() == old_hash:
         update_log_state(vault, text)
         return []
     return ["wiki/log.md is append-at-top only: existing entries were edited or removed; restore them and prepend the new entry"]

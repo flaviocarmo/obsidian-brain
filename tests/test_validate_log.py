@@ -20,6 +20,29 @@ def test_append_at_top_passes(vault):
     assert validate.validate_file(vault, vault / "wiki/log.md").ok
 
 
+def test_append_below_the_title_passes(vault):
+    """The real log opens with '# Operations Log' and new entries go under it,
+    so the old body is NOT a suffix of the new one. Hashing the whole body
+    flagged every legitimate append as tampering, silently, for weeks."""
+    validate.validate_file(vault, vault / "wiki/log.md")  # register
+    old = _log_text(vault)
+    anchor = "# Operations Log\n\n"
+    new = old.replace(anchor, anchor + "## [2026-06-15] Novissima\n\nx\n\n", 1)
+    (vault / "wiki/log.md").write_text(new, encoding="utf-8")
+    r = validate.validate_file(vault, vault / "wiki/log.md")
+    assert r.ok, r.errors
+
+
+def test_stale_v1_state_rebaselines_instead_of_blocking(vault):
+    import json
+    validate.validate_file(vault, vault / "wiki/log.md")
+    sp = vault / ".vault-meta/log-state.json"
+    sp.write_text(json.dumps({"length": 999999, "sha256": "deadbeef"}), encoding="utf-8")  # v1 shape
+    r = validate.validate_file(vault, vault / "wiki/log.md")
+    assert r.ok
+    assert json.loads(sp.read_text(encoding="utf-8"))["version"] == validate.LOG_STATE_VERSION
+
+
 def test_middle_edit_fails(vault):
     validate.validate_file(vault, vault / "wiki/log.md")
     tampered = _log_text(vault).replace("Entrada velha", "Entrada adulterada")

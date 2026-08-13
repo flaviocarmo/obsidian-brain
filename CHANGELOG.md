@@ -2,6 +2,11 @@
 
 All notable changes to this project are documented here. Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [SemVer](https://semver.org/).
 
+## [0.8.2] - 2026-08-13
+
+### Fixed
+- **The log validator called every legitimate append tampering.** `wiki/log.md` opens with a `# Operations Log` title and new entries go *under* it, so the previous body is not a suffix of the new one — and the check hashed the whole body. Every write since the state was last written was blocked; because a `PostToolUse` hook reports rather than reverts, the entries landed anyway, nobody read the message in the headless digest runs, and the stored baseline froze. The comparison now starts at the first `## ` heading, skipping the file's fixed prologue. The state gained a `version` field, and a state in the old shape re-baselines instead of blocking. The test fixture's log had no title at all, which is why the suite never saw this.
+
 ## [0.8.1] - 2026-08-13
 
 ### Fixed

@@ -52,6 +52,7 @@ def vault(tmp_path):
     )
     (wiki / "log.md").write_text(
         "---\ntype: meta\ntitle: \"Log\"\nupdated: 2026-06-01\n---\n\n"
+        "# Operations Log\n\n"  # the real log has a title above the entries
         "## [2026-06-01] Entrada nova\n\ndetalhe\n\n"
         "## [2026-05-01] Entrada velha\n\ndetalhe\n",
         encoding="utf-8",

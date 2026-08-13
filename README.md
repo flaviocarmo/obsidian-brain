@@ -17,7 +17,7 @@ LLM-maintained knowledge bases fail in predictable ways: the hot-context file gr
 - **Contradiction detection.** Pages accrete, and two of them end up disagreeing about the same invoice or work order. The linter joins pages on strong identifiers and reports the pair when the *newer* page still says pending while an older one says issued. It never picks a winner: both sides are reported with their `updated` dates.
 - **Section extractor for big pages.** Real vaults grow 250 KB ledger pages. `brain extract` returns a token-estimated table of contents, then just the section you ask for, fence-aware (headings inside code blocks are not headings).
 - **Search stays external, and required.** basic-memory indexes the vault locally (FTS + vector, zero LLM tokens); this plugin implements what comes after search, not search itself. `brain doctor` fails loudly when it is missing, because silent degradation to grep is worse than an error.
-- **Everything deterministic is code with tests.** 136 pytest tests, Windows-native, cp1252-console safe, pure stdlib.
+- **Everything deterministic is code with tests.** 138 pytest tests, Windows-native, cp1252-console safe, pure stdlib.
 
 ### Requirements
 
@@ -124,7 +124,7 @@ The automatic path writes journal pages, a log entry, the hot cache and the inde
 ### Development
 
 ```
-python -m pytest -v      # 136 tests, Windows-native
+python -m pytest -v      # 138 tests, Windows-native
 ```
 
 Design spec and implementation plan live in [`docs/superpowers/`](docs/superpowers/).
@@ -142,7 +142,7 @@ Bases de conhecimento mantidas por LLM falham de formas previsíveis: o arquivo 
 - **Detecção de contradições.** Páginas crescem por acréscimo e duas acabam discordando sobre a mesma NF ou OS. O linter junta páginas por identificadores fortes e reporta o par quando a página *mais recente* ainda diz pendente e uma mais antiga já diz emitida. Nunca escolhe vencedor: mostra os dois lados com as datas `updated`.
 - **Extrator de seção para páginas grandes.** Vault real cria páginas de ledger de 250 KB. `brain extract` devolve um sumário com estimativa de tokens por seção e depois só a seção pedida, ciente de code fences (heading dentro de bloco de código não é heading).
 - **Busca fica de fora, e é obrigatória.** O basic-memory indexa o vault localmente (FTS + vetorial, zero tokens de LLM); este plugin implementa o que vem depois da busca, não a busca. O `brain doctor` falha alto quando ele falta, porque degradar para grep em silêncio é pior que erro.
-- **Tudo que é determinístico é código com teste.** 136 testes pytest, Windows nativo, seguro em console cp1252, stdlib pura.
+- **Tudo que é determinístico é código com teste.** 138 testes pytest, Windows nativo, seguro em console cp1252, stdlib pura.
 
 ### Requisitos
 
@@ -209,7 +209,7 @@ Agendamento (exemplo Windows): `schtasks /Create /SC DAILY /ST 22:00 ...` como n
 ### Desenvolvimento
 
 ```
-python -m pytest -v      # 136 testes, Windows nativo
+python -m pytest -v      # 138 testes, Windows nativo
 ```
 
 Spec de design e plano de implementação em [`docs/superpowers/`](docs/superpowers/).
