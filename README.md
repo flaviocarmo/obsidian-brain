@@ -17,7 +17,7 @@ LLM-maintained knowledge bases fail in predictable ways: the hot-context file gr
 - **Contradiction detection.** Pages accrete, and two of them end up disagreeing about the same invoice or work order. The linter joins pages on strong identifiers and reports the pair when the *newer* page still says pending while an older one says issued. It never picks a winner: both sides are reported with their `updated` dates.
 - **Section extractor for big pages.** Real vaults grow 250 KB ledger pages. `brain extract` returns a token-estimated table of contents, then just the section you ask for, fence-aware (headings inside code blocks are not headings).
 - **Search stays external, and required.** basic-memory indexes the vault locally (FTS + vector, zero LLM tokens); this plugin implements what comes after search, not search itself. `brain doctor` fails loudly when it is missing, because silent degradation to grep is worse than an error.
-- **Everything deterministic is code with tests.** 138 pytest tests, Windows-native, cp1252-console safe, pure stdlib.
+- **Everything deterministic is code with tests.** 156 pytest tests, Windows-native, cp1252-console safe, pure stdlib.
 
 ### Requirements
 
@@ -72,20 +72,69 @@ a 130k-token catalog into context and blames the vault for being slow.
 
 ### Codex CLI
 
-Most of the plugin ports over; the write-validation hooks are the exception.
-Verified against `codex-cli 0.147.0`:
+Everything ports over, verified against `codex-cli 0.147.0`:
 
 | Piece | Status on Codex |
 |---|---|
-| Skills (`query`, `save`, `ingest`, `lint`, `fold`, `hot-cache`) | **Work as-is.** Copy `skills/*` to `~/.agents/skills/` (Codex's user scope; repo scope is `.agents/skills`). Same `name`/`description` frontmatter. Invoke with `$save`, or let the description match. |
+| Skills (`query`, `save`, `ingest`, `lint`, `fold`, `hot-cache`) | **Work as-is**, installed to `~/.agents/skills/obsidian-brain-*` (Codex user scope; repo scope is `.agents/skills`). Same `name`/`description` frontmatter. Invoke with `$obsidian-brain-save`, or let the description match. |
 | `brain.py` CLI | **Works as-is.** Pure stdlib; `--vault` or `BRAIN_VAULT` instead of `~/.claude/brain.json`. |
 | Search (basic-memory) | `codex mcp add basic-memory -- basic-memory mcp`. |
 | Session capture (`Stop` hook) | **Works as-is.** Codex sends the same fields (`session_id`, `transcript_path`, `cwd`) on stdin. Register in `~/.codex/hooks.json`. |
-| Write validation + index recompile (`PostToolUse`) | **Needs an adapter.** Codex fires `PostToolUse` for `apply_patch`, but the payload carries `tool_input.command` (the patch text), not `tool_input.file_path` — the hooks have to parse the touched paths out of the patch. Everything else matches, including `{"decision": "block", "reason": ...}` and `additionalContext`. |
+| Write validation + index recompile (`PostToolUse`) | **Works**, via the shared payload adapter: Codex fires `PostToolUse` for `apply_patch`, whose payload carries `tool_input.command` (the patch text) instead of `file_path`, so `hooks/hook_payload.py` reads the touched paths out of the patch envelope and validates every one of them. |
 
-The vault's contract lives in its `CLAUDE.md`; Codex reads `AGENTS.md`, so either
-symlink one to the other or keep a short `AGENTS.md` in the vault root pointing at
-it. The global equivalent of the snippet above goes in `~/.codex/AGENTS.md`.
+Install with:
+
+```
+python <plugin>/scripts/brain.py install-codex        # add --dry-run to preview
+```
+
+It copies the skills to `~/.agents/skills/obsidian-brain-*` (rewriting
+`${CLAUDE_PLUGIN_ROOT}`, which does not exist outside Claude Code, to the repo
+path) and merges the hooks into `~/.codex/hooks.json`, leaving whatever else lives
+there untouched. Re-running is safe: our handlers are matched by script name and
+replaced, so changing interpreter or moving the repo refreshes them instead of
+leaving a stale twin.
+
+Then, once, by hand:
+
+1. `codex mcp add basic-memory -- basic-memory mcp`
+2. Open `codex` and run **`/hooks`** to review and trust the new hooks. **Codex
+   silently skips hooks it has not been shown** — no error, no warning at the call
+   site, the write just sails through unvalidated. This is the step that is easy to
+   miss and expensive to miss.
+3. Keep an `AGENTS.md` in the vault root: Codex reads `AGENTS.md`, not `CLAUDE.md`.
+   Point it at the `CLAUDE.md` for the full schema and repeat the essentials
+   (session start, the index/log prohibition, where each kind of page goes).
+
+The global equivalent of the CLAUDE.md snippet above goes in `~/.codex/AGENTS.md`.
+
+Two more traps worth knowing: hook commands should use an **absolute interpreter
+path** (`python` may not resolve in the environment Codex runs hooks in), and
+`codex exec` will not run untrusted hooks even with `--dangerously-bypass-hook-trust`.
+
+### Upgrading
+
+**Claude Code** reads skills and hooks straight from the plugin directory:
+
+```
+claude plugin marketplace update obsidian-brain-marketplace
+claude plugin update obsidian-brain     # restart to apply
+```
+
+For a marketplace pointing at a local directory (`source_type: directory`), a
+`git pull` in that directory is already the upgrade — the running session loads
+from the repo itself. `claude plugin tag` cuts a `obsidian-brain--vX.Y.Z` git tag
+and validates that `plugin.json` and the marketplace entry agree.
+
+**Codex** has no plugin loader for this, and its skills and hooks are *copies*:
+
+```
+git pull && python <plugin>/scripts/brain.py install-codex
+```
+
+Changing a hook's definition resets its trust, so after an upgrade that touched
+`hooks/`, run `/hooks` again — otherwise validation goes quiet exactly when you
+believe you just upgraded it.
 
 ### Vault layout (data-derived taxonomy)
 
@@ -167,7 +216,7 @@ The automatic path writes journal pages, a log entry, the hot cache and the inde
 ### Development
 
 ```
-python -m pytest -v      # 138 tests, Windows-native
+python -m pytest -v      # 156 tests, Windows-native
 ```
 
 Design spec and implementation plan live in [`docs/superpowers/`](docs/superpowers/).
@@ -185,7 +234,7 @@ Bases de conhecimento mantidas por LLM falham de formas previsíveis: o arquivo 
 - **Detecção de contradições.** Páginas crescem por acréscimo e duas acabam discordando sobre a mesma NF ou OS. O linter junta páginas por identificadores fortes e reporta o par quando a página *mais recente* ainda diz pendente e uma mais antiga já diz emitida. Nunca escolhe vencedor: mostra os dois lados com as datas `updated`.
 - **Extrator de seção para páginas grandes.** Vault real cria páginas de ledger de 250 KB. `brain extract` devolve um sumário com estimativa de tokens por seção e depois só a seção pedida, ciente de code fences (heading dentro de bloco de código não é heading).
 - **Busca fica de fora, e é obrigatória.** O basic-memory indexa o vault localmente (FTS + vetorial, zero tokens de LLM); este plugin implementa o que vem depois da busca, não a busca. O `brain doctor` falha alto quando ele falta, porque degradar para grep em silêncio é pior que erro.
-- **Tudo que é determinístico é código com teste.** 138 testes pytest, Windows nativo, seguro em console cp1252, stdlib pura.
+- **Tudo que é determinístico é código com teste.** 156 testes pytest, Windows nativo, seguro em console cp1252, stdlib pura.
 
 ### Requisitos
 
@@ -252,7 +301,7 @@ Agendamento (exemplo Windows): `schtasks /Create /SC DAILY /ST 22:00 ...` como n
 ### Desenvolvimento
 
 ```
-python -m pytest -v      # 138 testes, Windows nativo
+python -m pytest -v      # 156 testes, Windows nativo
 ```
 
 Spec de design e plano de implementação em [`docs/superpowers/`](docs/superpowers/).

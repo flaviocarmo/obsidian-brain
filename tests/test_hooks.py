@@ -53,6 +53,34 @@ def test_good_write_is_silent(vault):
     assert r.returncode == 0 and r.stdout.strip() == ""
 
 
+def test_codex_apply_patch_payload_blocks(vault):
+    """Codex reports edits as apply_patch: the patch text in tool_input.command,
+    paths relative to cwd, no file_path anywhere. Same vault, same rules."""
+    bad = vault / "wiki/journal/PatchRuim.md"
+    bad.write_text("# sem frontmatter\n", encoding="utf-8")
+    patch = ("*** Begin Patch\n"
+             "*** Add File: wiki/journal/PatchRuim.md\n"
+             "+# sem frontmatter\n"
+             "*** End Patch\n")
+    r = _run_hook({"cwd": str(vault), "tool_name": "apply_patch",
+                   "tool_input": {"command": patch}}, str(vault))
+    assert r.returncode == 0
+    out = json.loads(r.stdout)
+    assert out["decision"] == "block" and "frontmatter" in out["reason"]
+
+
+def test_codex_patch_touching_many_files_reports_each(vault):
+    for name in ("RuimUm.md", "RuimDois.md"):
+        (vault / "wiki/journal" / name).write_text("# sem frontmatter\n", encoding="utf-8")
+    patch = ("*** Begin Patch\n"
+             "*** Add File: wiki/journal/RuimUm.md\n"
+             "*** Add File: wiki/journal/RuimDois.md\n"
+             "*** End Patch\n")
+    r = _run_hook({"cwd": str(vault), "tool_input": {"command": patch}}, str(vault))
+    out = json.loads(r.stdout)
+    assert "RuimUm.md" in out["reason"] and "RuimDois.md" in out["reason"]
+
+
 def test_broken_event_is_silent():
     import os
     r = subprocess.run(

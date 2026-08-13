@@ -7,6 +7,9 @@ import sys
 import time
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from hook_payload import target_paths  # noqa: E402 - sibling module, path set above
+
 REPO = Path(__file__).resolve().parents[1]
 BRAIN = REPO / "scripts" / "brain.py"
 DEBOUNCE_SECONDS = 30
@@ -31,15 +34,18 @@ def _vault() -> Path | None:
 def main() -> int:
     try:
         event = json.load(sys.stdin)
-        file_path = event.get("tool_input", {}).get("file_path")
         vault = _vault()
-        if not file_path or vault is None:
+        if vault is None:
             return 0
-        try:
-            rel = Path(file_path).resolve().relative_to(vault.resolve()).as_posix()
-        except ValueError:
-            return 0
-        if not rel.startswith("wiki/") or rel == "wiki/index.md":
+        touched = []
+        for target in target_paths(event):
+            try:
+                rel = target.resolve().relative_to(vault.resolve()).as_posix()
+            except ValueError:
+                continue
+            if rel.startswith("wiki/") and rel != "wiki/index.md":
+                touched.append(rel)
+        if not touched:
             return 0
         meta = vault / ".vault-meta"
         meta.mkdir(exist_ok=True)

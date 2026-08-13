@@ -2,6 +2,16 @@
 
 All notable changes to this project are documented here. Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [SemVer](https://semver.org/).
 
+## [0.9.0] - 2026-08-13
+
+### Added
+- **Codex CLI support.** `brain install-codex` copies the skills into `~/.agents/skills/` and merges the hooks into `~/.codex/hooks.json`, preserving handlers that belong to other tools. Re-running is idempotent *and* self-healing: our entries are identified by script name, so changing the interpreter or moving the repo refreshes them instead of leaving a stale twin pointing at the old copy.
+- `hooks/hook_payload.py`: one adapter both agents share. Claude Code names the file (`tool_input.file_path`); Codex edits through `apply_patch` and puts the patch text in `tool_input.command`, so the touched paths have to be read out of the `*** Add/Update/Delete File:` envelope (plus `*** Move to:`), resolved against the payload's `cwd`. The validator now checks *every* file a patch touches, not one.
+
+### Notes
+- Codex **silently skips hooks it has not been shown**: no error at the call site, the write simply lands unvalidated. After installing (or after any upgrade that changes a hook definition, which resets its trust) you must run `/hooks` in the Codex TUI. `codex exec` will not run them even with `--dangerously-bypass-hook-trust`. Documented in the README because it is invisible from inside the tool.
+- Hook commands are pinned to an absolute interpreter path — `python` does not necessarily resolve in the environment Codex runs hooks in.
+
 ## [0.8.2] - 2026-08-13
 
 ### Fixed

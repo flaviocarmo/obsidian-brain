@@ -10,6 +10,9 @@ import subprocess
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from hook_payload import target_paths  # noqa: E402 - sibling module, path set above
+
 REPO = Path(__file__).resolve().parents[1]
 BRAIN = REPO / "scripts" / "brain.py"
 
@@ -33,22 +36,27 @@ def _vault() -> Path | None:
 def main() -> int:
     try:
         event = json.load(sys.stdin)
-        file_path = event.get("tool_input", {}).get("file_path")
         vault = _vault()
-        if not file_path or vault is None:
+        if vault is None:
             return 0
-        target = Path(file_path)
-        try:
-            target.resolve().relative_to(vault.resolve())
-        except ValueError:
+        targets = target_paths(event)
+        if not targets:
             return 0
-        proc = subprocess.run(
-            [sys.executable, str(BRAIN), "--vault", str(vault), "validate", str(target)],
-            capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=60,
-        )
-        errors = [l for l in proc.stdout.splitlines() if l.startswith("ERROR: ")]
-        warns = [l for l in proc.stdout.splitlines() if l.startswith("WARN: ")]
-        if proc.returncode == 1 and errors:
+        errors: list[str] = []
+        warns: list[str] = []
+        for target in targets:
+            try:
+                target.resolve().relative_to(vault.resolve())
+            except ValueError:
+                continue  # outside the vault: not our business
+            proc = subprocess.run(
+                [sys.executable, str(BRAIN), "--vault", str(vault), "validate", str(target)],
+                capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=60,
+            )
+            if proc.returncode == 1:
+                errors += [l for l in proc.stdout.splitlines() if l.startswith("ERROR: ")]
+            warns += [l for l in proc.stdout.splitlines() if l.startswith("WARN: ")]
+        if errors:
             print(json.dumps({"decision": "block", "reason": "\n".join(errors)}))
         elif warns:
             print(json.dumps({"hookSpecificOutput": {

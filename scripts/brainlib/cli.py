@@ -36,6 +36,8 @@ def build_parser() -> argparse.ArgumentParser:
     dig.add_argument("--model", default=None)
     dig.add_argument("--skip-hot", action="store_true",
                      help="do not refresh wiki/hot.md after consolidating")
+    cdx = sub.add_parser("install-codex", help="copy skills and hooks into Codex CLI")
+    cdx.add_argument("--dry-run", action="store_true")
     return p
 
 
@@ -136,6 +138,9 @@ def main(argv: list[str] | None = None) -> int:
             from . import digest as digest_mod
             vault = config.vault_path(args.vault)
             return digest_mod.main_cli(vault, args.model, args.dry_run, args.skip_hot)
+        if args.command == "install-codex":
+            from . import codex_install
+            return codex_install.main_cli(config.vault_path(args.vault), args.dry_run)
     except (config.ConfigError, OSError) as e:
         print(f"brain: {e}", file=sys.stderr)
         return 2
