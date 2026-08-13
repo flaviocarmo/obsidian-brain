@@ -18,7 +18,7 @@ LLM-maintained knowledge bases fail in predictable ways: the hot-context file gr
 - **Address drift detection.** Some facts have no identifier to join on: a host answers at one address in one page and another elsewhere after a rebuild, and the wrong one gets pasted into a command months later. Host→address pairs are compared across pages that claim current truth (dated session pages are excluded — they describe a moment). Narrow on purpose: a noisy linter teaches you to ignore the linter.
 - **Section extractor for big pages, and a per-topic map.** Real vaults grow 250 KB ledger pages. `brain extract` returns a token-estimated table of contents, then just the section you ask for, fence-aware (headings inside code blocks are not headings). The compiled index is grouped by full folder path, so `extract index --heading "domains/infra (28)"` is a thematic map for ~600 tokens instead of a 5k-token block covering every domain.
 - **Search stays external, and required.** basic-memory indexes the vault locally (FTS + vector, zero LLM tokens); this plugin implements what comes after search, not search itself. `brain doctor` fails loudly when it is missing, because silent degradation to grep is worse than an error.
-- **Everything deterministic is code with tests.** 172 pytest tests, Windows-native, cp1252-console safe, pure stdlib.
+- **Everything deterministic is code with tests.** 182 pytest tests, Windows-native, cp1252-console safe, pure stdlib.
 
 ### Requirements
 
@@ -165,7 +165,7 @@ Every wiki page carries frontmatter: `type`, `title`, `created`, `updated`, `tag
 | "query the vault: ..." | `query` | hot.md, then basic-memory search, then `extract --toc`/`--heading` on big pages; answers cite `[[Page#Heading]]` |
 | `/save` or "save this to the vault" | `save` | picks note type and folder, updates instead of duplicating, inserts ledger records in chronological position |
 | "ingest file.md" | `ingest` | source goes to `.raw/`, becomes atomic pages with provenance |
-| "lint the wiki" | `lint` | runs the deterministic linter (including cross-page contradictions and near-duplicates), interprets, proposes fixes (applying is a separate approval) |
+| "lint the wiki" | `lint` | runs the deterministic linter (contradictions, near-duplicates, address drift, bloated pages), interprets, proposes fixes — including the `split` to cut an oversized page (applying is a separate approval) |
 | "fold the log" | `fold` | dry-run of the log rollup into monthly archives; `--apply` only after approval |
 | "update hot cache" | `hot-cache` | archives the current hot.md, rewrites it whole within the 500-word budget |
 
@@ -179,6 +179,7 @@ python <plugin>/scripts/brain.py lint --json
 python <plugin>/scripts/brain.py compile-index
 python <plugin>/scripts/brain.py hot-check
 python <plugin>/scripts/brain.py fold            # dry-run; add --apply to execute
+python <plugin>/scripts/brain.py split "Some Big Page" --heading "Section"  # dry-run; --apply cuts
 python <plugin>/scripts/brain.py doctor          # check requirements (basic-memory included)
 ```
 
@@ -217,7 +218,7 @@ The automatic path writes journal pages, a log entry, the hot cache and the inde
 ### Development
 
 ```
-python -m pytest -v      # 172 tests, Windows-native
+python -m pytest -v      # 182 tests, Windows-native
 ```
 
 Design spec and implementation plan live in [`docs/superpowers/`](docs/superpowers/).
@@ -235,7 +236,7 @@ Bases de conhecimento mantidas por LLM falham de formas previsíveis: o arquivo 
 - **Detecção de contradições.** Páginas crescem por acréscimo e duas acabam discordando sobre a mesma NF ou OS. O linter junta páginas por identificadores fortes e reporta o par quando a página *mais recente* ainda diz pendente e uma mais antiga já diz emitida. Nunca escolhe vencedor: mostra os dois lados com as datas `updated`.
 - **Extrator de seção para páginas grandes.** Vault real cria páginas de ledger de 250 KB. `brain extract` devolve um sumário com estimativa de tokens por seção e depois só a seção pedida, ciente de code fences (heading dentro de bloco de código não é heading).
 - **Busca fica de fora, e é obrigatória.** O basic-memory indexa o vault localmente (FTS + vetorial, zero tokens de LLM); este plugin implementa o que vem depois da busca, não a busca. O `brain doctor` falha alto quando ele falta, porque degradar para grep em silêncio é pior que erro.
-- **Tudo que é determinístico é código com teste.** 172 testes pytest, Windows nativo, seguro em console cp1252, stdlib pura.
+- **Tudo que é determinístico é código com teste.** 182 testes pytest, Windows nativo, seguro em console cp1252, stdlib pura.
 
 ### Requisitos
 
@@ -273,7 +274,7 @@ O mesmo da seção em inglês: `.raw/` imutável; `wiki/` com `hot.md` (500 pala
 | "query o vault: ..." | `query` | hot.md, busca basic-memory, `extract --toc`/`--heading` em página grande; resposta cita `[[Página#Heading]]` |
 | `/save` ou "salve no vault" | `save` | decide tipo e pasta, atualiza em vez de duplicar, insere registro de ledger na posição cronológica |
 | "ingest arquivo.md" | `ingest` | source vai para `.raw/` e vira páginas atômicas com proveniência |
-| "lint the wiki" | `lint` | roda o linter determinístico, interpreta, propõe fixes (aplicar é aprovação separada) |
+| "lint the wiki" | `lint` | roda o linter determinístico (contradições, quase-duplicatas, drift de endereço, página inchada), interpreta e propõe fixes — inclusive o `split` que corta a página grande (aplicar é aprovação separada) |
 | "fold the log" | `fold` | dry-run do rollup do log em arquivos mensais; `--apply` só com aprovação |
 | "update hot cache" | `hot-cache` | arquiva o hot.md atual e o reescreve inteiro dentro das 500 palavras |
 
@@ -302,7 +303,7 @@ Agendamento (exemplo Windows): `schtasks /Create /SC DAILY /ST 22:00 ...` como n
 ### Desenvolvimento
 
 ```
-python -m pytest -v      # 172 testes, Windows nativo
+python -m pytest -v      # 182 testes, Windows nativo
 ```
 
 Spec de design e plano de implementação em [`docs/superpowers/`](docs/superpowers/).

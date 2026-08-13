@@ -30,6 +30,9 @@ def build_parser() -> argparse.ArgumentParser:
     sub.add_parser("hot-check")
     fold = sub.add_parser("fold")
     fold.add_argument("--apply", action="store_true")
+    fold.add_argument("--keep-days", type=int, default=30)
+    fold.add_argument("--max-tokens", type=int, default=None,
+                      help="archive past the date cutoff until log.md fits (default 15000)")
     sub.add_parser("doctor")
     dig = sub.add_parser("digest")
     dig.add_argument("--dry-run", action="store_true")
@@ -38,6 +41,12 @@ def build_parser() -> argparse.ArgumentParser:
                      help="do not refresh wiki/hot.md after consolidating")
     cdx = sub.add_parser("install-codex", help="copy skills and hooks into Codex CLI")
     cdx.add_argument("--dry-run", action="store_true")
+    spl = sub.add_parser("split", help="move a section out of a page that got too big")
+    spl.add_argument("page")
+    spl.add_argument("--heading", required=True)
+    spl.add_argument("--to", default=None, help="destination folder under wiki/ (default: same folder)")
+    spl.add_argument("--title", default=None, help="title of the new page (default: the heading)")
+    spl.add_argument("--apply", action="store_true")
     return p
 
 
@@ -122,7 +131,8 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "fold":
             from . import fold as fold_mod
             vault = config.vault_path(args.vault)
-            fp = fold_mod.plan(vault)
+            fp = fold_mod.plan(vault, keep_days=args.keep_days,
+                               max_tokens=args.max_tokens or fold_mod.MAX_LOG_TOKENS)
             if args.apply:
                 print(fold_mod.apply(vault, fp))
             else:
@@ -138,6 +148,10 @@ def main(argv: list[str] | None = None) -> int:
             from . import digest as digest_mod
             vault = config.vault_path(args.vault)
             return digest_mod.main_cli(vault, args.model, args.dry_run, args.skip_hot)
+        if args.command == "split":
+            from . import split as split_mod
+            return split_mod.main_cli(config.vault_path(args.vault), args.page,
+                                      args.heading, args.to, args.title, args.apply)
         if args.command == "install-codex":
             from . import codex_install
             return codex_install.main_cli(config.vault_path(args.vault), args.dry_run)

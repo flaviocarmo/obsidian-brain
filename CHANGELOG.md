@@ -2,6 +2,15 @@
 
 All notable changes to this project are documented here. Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [SemVer](https://semver.org/).
 
+## [0.11.0] - 2026-08-13
+
+### Added
+- **`brain split` performs the cut a bloated-page warning asks for.** Reporting without a remedy is noise with a clean conscience: the page keeps growing and every future read pays for it. The human names the section; the tool does the three things that are easy to get wrong by hand — the heading **stays** in the origin with a `[[pointer]]` under it (deleting it is how a manual split silently breaks `[[Page#Section]]` anchors), the new page inherits `type`, `status` and `tags` so it passes the validator on arrival, and nothing is written until `--apply`. The plan also lists which pages link to that anchor.
+- **`brain fold` bounds `log.md` by size, not only by date** (`--max-tokens`, default 15000). A date cutoff does not bound a file: this vault took 45 entries in the first 13 days of a month, so "keep the last 30 days" still left a 53k-token log and archived 7 entries. The size cap keeps archiving the oldest survivors until the file fits.
+
+### Changed
+- The bloated-page finding now carries the two commands that act on it (`extract --toc` to see the sections, `split` to cut), and the `lint` skill gained the procedure: look at section costs, propose the cut, let the tool execute it, and consider the cheaper outs first (distil repeated prose, archive dated history to `wiki/folds/`).
+
 ## [0.10.0] - 2026-08-13
 
 ### Added

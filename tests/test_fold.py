@@ -75,3 +75,36 @@ def test_cli_fold_missing_log_returns_2_no_traceback(vault, monkeypatch, capsys)
     err = capsys.readouterr().err
     assert rc == 2
     assert "Traceback" not in err
+
+
+def test_size_cap_archives_past_the_date_cutoff(vault):
+    """A date cutoff alone does not bound the file: 45 entries landed in 13
+    days in the real vault, so 'last 30 days' still left a 50k-token log."""
+    from datetime import date
+    entries = "".join(
+        f"## [2026-06-{day:02d}] Entrada {day}\n\n" + ("texto " * 400) + "\n\n"
+        for day in range(1, 21)
+    )
+    (vault / "wiki/log.md").write_text(
+        '---\ntype: meta\ntitle: "Log"\nupdated: 2026-06-20\n---\n\n# Operations Log\n\n' + entries,
+        encoding="utf-8")
+    generous = fold.plan(vault, keep_days=365, today=date(2026, 6, 21), max_tokens=10_000_000)
+    assert len(generous.keep) == 20 and not generous.archive  # date rule alone keeps everything
+
+    capped = fold.plan(vault, keep_days=365, today=date(2026, 6, 21), max_tokens=3000)
+    assert len(capped.keep) < 20 and capped.archive
+    kept_size = len("\n".join(capped.keep)) // 4
+    assert kept_size <= 3000
+
+
+def test_size_cap_keeps_the_newest_entries(vault):
+    from datetime import date
+    entries = "".join(
+        f"## [2026-06-{day:02d}] Entrada {day}\n\n" + ("texto " * 400) + "\n\n"
+        for day in (3, 2, 1)  # newest first, as the log is written
+    )
+    (vault / "wiki/log.md").write_text(
+        '---\ntype: meta\ntitle: "Log"\nupdated: 2026-06-03\n---\n\n' + entries, encoding="utf-8")
+    fp = fold.plan(vault, keep_days=365, today=date(2026, 6, 4), max_tokens=600)
+    assert "Entrada 3" in "\n".join(fp.keep)
+    assert any("Entrada 1" in e for entries in fp.archive.values() for e in entries)

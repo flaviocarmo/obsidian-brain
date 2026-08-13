@@ -75,7 +75,8 @@ def run(vault: Path) -> list[Finding]:
                 findings.append(Finding(
                     "info", rel,
                     f"bloated page: ~{tokens} tokens (limite {BLOATED_PAGE_TOKENS}); "
-                    "considere dividir por seção ou destilar"))
+                    f'seções: brain extract "{p.stem}" --toc — '
+                    f'corte: brain split "{p.stem}" --heading "<seção>" [--apply]'))
 
         lines = body.splitlines()
         heads = extract.iter_headings(body)

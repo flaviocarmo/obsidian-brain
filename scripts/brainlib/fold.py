@@ -33,7 +33,11 @@ def _entries(body: str) -> list[tuple[date, str]]:
     return out
 
 
-def plan(vault: Path, keep_days: int = 30, today: date | None = None) -> FoldPlan:
+MAX_LOG_TOKENS = 15000
+
+
+def plan(vault: Path, keep_days: int = 30, today: date | None = None,
+         max_tokens: int = MAX_LOG_TOKENS) -> FoldPlan:
     today = today or date.today()
     cutoff = today - timedelta(days=keep_days)
     text = (vault / "wiki" / "log.md").read_text(encoding="utf-8")
@@ -41,11 +45,25 @@ def plan(vault: Path, keep_days: int = 30, today: date | None = None) -> FoldPla
     marks = list(_ENTRY.finditer(body))
     preamble = body[: marks[0].start()] if marks else body
     fp = FoldPlan(fm_block=block or "type: meta\ntitle: \"Log\"", preamble=preamble.strip("\n"))
-    for d, entry in _entries(body):
+    entries = _entries(body)
+    kept: list[tuple[date, str]] = []
+    for d, entry in entries:
         if d >= cutoff:
-            fp.keep.append(entry)
+            kept.append((d, entry))
         else:
             fp.archive.setdefault(f"{d.year:04d}-{d.month:02d}", []).append(entry)
+
+    # A date cutoff alone does not bound the file: 45 entries landed in the
+    # first 13 days of one month here, so "last 30 days" still left a 50k-token
+    # log. Keep archiving the oldest of what survived until the file fits.
+    def size(items: list[tuple[date, str]]) -> int:
+        return max(1, len("\n".join(e for _d, e in items)) // 4)
+
+    while len(kept) > 1 and size(kept) > max_tokens:
+        d, entry = kept.pop()  # entries are newest-first; the tail is the oldest
+        fp.archive.setdefault(f"{d.year:04d}-{d.month:02d}", []).insert(0, entry)
+
+    fp.keep = [e for _d, e in kept]
     return fp
 
 
