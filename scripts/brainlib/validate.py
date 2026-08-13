@@ -10,7 +10,13 @@ from pathlib import Path
 from . import frontmatter
 
 TYPES = {"source", "entity", "concept", "domain", "comparison", "question",
-         "overview", "meta", "area", "goal", "person", "decision"}
+         "overview", "meta", "area", "goal", "person", "decision", "runbook"}
+# A runbook is the one page kind read while something is broken, so it is the
+# one kind worth validating structurally. These three sections are what turns
+# a narrative into a procedure someone else can execute: when it applies, what
+# to do, and — the section every informal runbook omits — how to know it
+# worked. Headings are matched accent- and case-insensitively.
+RUNBOOK_SECTIONS = ("quando usar", "passos", "verificacao")
 STATUSES = {"seed", "developing", "mature", "evergreen"}
 REQUIRED_KEYS = ("type", "title", "created", "updated", "tags", "status")
 HOT_WORD_LIMIT = 500
@@ -57,6 +63,18 @@ def check_schema(meta: dict) -> list[str]:
     if created and updated and updated < created:
         errors.append(f"updated {updated} before created {created}")
     return errors
+
+
+def check_runbook(text: str) -> list[str]:
+    """A runbook without a verification section is a story, not a procedure."""
+    from . import extract
+    titles = {extract._fold(t) for _i, _lvl, t in extract.iter_headings(text)}
+    missing = [s for s in RUNBOOK_SECTIONS
+               if not any(t.startswith(s) or s in t for t in titles)]
+    if missing:
+        return [f"runbook sem secao obrigatoria: {', '.join(missing)} "
+                f"(esperado: {', '.join(RUNBOOK_SECTIONS)})"]
+    return []
 
 
 def check_hot(text: str) -> list[str]:
@@ -223,6 +241,8 @@ def validate_file(vault: Path, path: Path, by_brain: bool = False) -> Report:
     if name.startswith("folds/"):
         return r  # archives: parseable is enough
     r.errors += check_schema(meta)
+    if str(meta.get("type", "")) == "runbook":
+        r.errors += check_runbook(text)
     if name.startswith(("contracts/", "areas/")):
         r.warnings += check_ledger_chronology(text)
     return r

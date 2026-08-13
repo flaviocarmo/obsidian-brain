@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented here. Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [SemVer](https://semver.org/).
 
+## [0.12.0] - 2026-08-13
+
+### Added
+- **`type: runbook`, validated structurally.** A vault records what happened (session pages), what is true (concept pages) and what is owed (ledgers) — but not *how to do it*. A session page narrates an incident; a runbook is what someone executes at 2am without reconstructing the narrative. It is also the one page kind read while something is broken, which is why it is the one kind worth checking beyond frontmatter: `## Quando usar`, `## Passos` and `## Verificação` are required, and the validator rejects a runbook without them. The verification section is the one every informal runbook omits, and the one that separates a procedure from a story.
+- The `query` skill looks in `wiki/runbooks/` first for operational questions, and `save` offers to write one when a session resolved something that will recur. The boundary is stated in both: a skill is a procedure that does not depend on your environment and lives in this repo; a runbook depends on this infrastructure (namespaces, addresses, who approves) and lives in the vault.
+
 ## [0.11.0] - 2026-08-13
 
 ### Added
