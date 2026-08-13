@@ -2,6 +2,14 @@
 
 All notable changes to this project are documented here. Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [SemVer](https://semver.org/).
 
+## [0.8.1] - 2026-08-13
+
+### Fixed
+- **The digest wrote a file in the vault root.** Transcripts are full of talk about *other* files — a `MEMORY.md`, a README, a config — and an unattended model reads that as an instruction: the first live run created `MEMORY.md` at the vault root, which no validator caught because the write hook only inspects paths under `wiki/`. The prompt now states the write scope positively (only `wiki/journal/*.md` and `wiki/log.md`) and says outright that files discussed in the transcript are subject matter, not instructions.
+
+### Added
+- A post-run scope check compares a file snapshot taken before the model runs against the vault afterwards and reports anything touched outside journal and log. It reports rather than deletes: content is never destroyed by a heuristic, and a stray page in the vault root is otherwise invisible until someone trips over it.
+
 ## [0.8.0] - 2026-08-13
 
 ### Fixed

@@ -68,6 +68,41 @@ def test_capture_hook_appends_and_dedupes(vault, tmp_path):
     assert len(lines) == 1  # consecutive same-session stops collapse into one line
 
 
+def test_run_reports_pages_written_outside_the_scope(vault, tmp_path, monkeypatch):
+    """A transcript talks about MEMORY.md, READMEs and configs; an unattended
+    model can read that as an instruction and drop a file in the vault root."""
+    t = tmp_path / "t.jsonl"
+    t.write_text("{}", encoding="utf-8")
+    _enqueue(vault, "s1", t)
+    (vault / "wiki" / "journal").mkdir(parents=True, exist_ok=True)
+
+    def fake_run(cmd, **kwargs):
+        (vault / "wiki" / "journal" / "Sessao 2026-08-13 x.md").write_text("ok", encoding="utf-8")
+        (vault / "MEMORY.md").write_text("nao devia estar aqui", encoding="utf-8")
+        return subprocess.CompletedProcess(cmd, 0, stdout="ok", stderr="")
+
+    monkeypatch.setattr(digest.subprocess, "run", fake_run)
+    rc, msg = digest.run(vault, skip_hot=True)
+    assert rc == 0
+    assert "wrote outside its scope: MEMORY.md" in msg
+
+
+def test_scope_check_accepts_journal_and_log(vault):
+    before = digest.snapshot_files(vault)
+    (vault / "wiki" / "journal" / "Sessao.md").write_text("x", encoding="utf-8")
+    (vault / "wiki" / "log.md").write_text("x", encoding="utf-8")
+    assert digest.files_written_outside_scope(vault, before) == []
+    (vault / "wiki" / "domains" / "intruso.md").write_text("x", encoding="utf-8")
+    assert digest.files_written_outside_scope(vault, before) == ["wiki/domains/intruso.md"]
+
+
+def test_prompt_forbids_writing_outside_journal_and_log(vault, tmp_path):
+    t = tmp_path / "t.jsonl"
+    t.write_text("{}", encoding="utf-8")
+    prompt = digest.build_prompt(vault, [{"session_id": "s", "transcript_path": str(t), "cwd": "c"}])
+    assert "ESCOPO DE ESCRITA" in prompt and "RAIZ do vault" in prompt
+
+
 def test_capture_hook_ignores_the_digest_child(vault, tmp_path):
     """The digest spawns a headless claude; its Stop hook must not enqueue it,
     or every run schedules a page about the previous run."""
