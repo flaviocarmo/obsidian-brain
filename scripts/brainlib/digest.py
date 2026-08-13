@@ -8,12 +8,16 @@ scope for the automatic path (curated saves stay human-triggered).
 """
 
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
 
 DIGEST_TIMEOUT_SECONDS = 1800
 DEFAULT_MODEL = "haiku"
+# Marks the headless child so its own Stop hook does not enqueue it: without
+# this the digest digests itself every single day.
+SELF_MARKER_ENV = "BRAIN_DIGEST"
 
 
 def _queue_path(vault: Path) -> Path:
@@ -113,11 +117,23 @@ def run(vault: Path, model: str = DEFAULT_MODEL, dry_run: bool = False,
          "--allowed-tools", "Read,Write,Edit,Grep,Glob"],
         capture_output=True, text=True, encoding="utf-8", errors="replace",
         timeout=DIGEST_TIMEOUT_SECONDS,
+        env={**os.environ, SELF_MARKER_ENV: "1"},
     )
     if proc.returncode != 0:
         return 1, f"digest: claude exited {proc.returncode}: {proc.stderr.strip()[:400]}"
     mark_done(vault, items)
-    return 0, f"digest: {len(items)} session(s) digested\n{proc.stdout.strip()[-600:]}"
+    return 0, f"digest: {len(items)} session(s) digested\n{recompile_index(vault)}\n{proc.stdout.strip()[-600:]}"
+
+
+def recompile_index(vault: Path) -> str:
+    """The PostToolUse hook only fires for pages an agent writes; anything typed
+    straight into Obsidian leaves index.md stale until someone recompiles. The
+    daily run is the natural place to close that gap (no LLM involved)."""
+    try:
+        from . import index as index_mod
+        return index_mod.compile(vault)
+    except OSError as e:
+        return f"index: recompile failed: {e}"
 
 
 def main_cli(vault: Path, model: str | None, dry_run: bool) -> int:

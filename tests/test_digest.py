@@ -68,6 +68,50 @@ def test_capture_hook_appends_and_dedupes(vault, tmp_path):
     assert len(lines) == 1  # consecutive same-session stops collapse into one line
 
 
+def test_capture_hook_ignores_the_digest_child(vault, tmp_path):
+    """The digest spawns a headless claude; its Stop hook must not enqueue it,
+    or every run schedules a page about the previous run."""
+    import os
+    event = {"session_id": "digest-child", "transcript_path": str(tmp_path / "t.jsonl"), "cwd": "w"}
+    r = subprocess.run([sys.executable, str(HOOK)], input=json.dumps(event),
+                       capture_output=True, text=True,
+                       env=dict(os.environ, BRAIN_VAULT=str(vault), BRAIN_DIGEST="1"), timeout=30)
+    assert r.returncode == 0
+    assert not (vault / ".vault-meta" / "capture-queue.jsonl").exists()
+
+
+def test_run_marks_the_child_process(vault, tmp_path, monkeypatch):
+    """The marker has to reach the child env, otherwise the hook cannot see it."""
+    t = tmp_path / "t.jsonl"
+    t.write_text("{}", encoding="utf-8")
+    _enqueue(vault, "s1", t)
+    seen = {}
+
+    def fake_run(cmd, **kwargs):
+        seen.update(kwargs.get("env") or {})
+        return subprocess.CompletedProcess(cmd, 0, stdout="ok", stderr="")
+
+    monkeypatch.setattr(digest.subprocess, "run", fake_run)
+    rc, _ = digest.run(vault)
+    assert rc == 0 and seen.get(digest.SELF_MARKER_ENV) == "1"
+
+
+def test_run_recompiles_the_index(vault, tmp_path, monkeypatch):
+    """Pages typed in Obsidian never fire the PostToolUse hook; the daily run
+    is what keeps index.md honest."""
+    t = tmp_path / "t.jsonl"
+    t.write_text("{}", encoding="utf-8")
+    _enqueue(vault, "s1", t)
+    (vault / "wiki").mkdir(exist_ok=True)
+    (vault / "wiki" / "typed-by-hand.md").write_text(
+        "---\ntype: source\ntitle: \"Typed\"\nstatus: mature\n---\n\ncorpo\n", encoding="utf-8")
+    monkeypatch.setattr(digest.subprocess, "run",
+                        lambda cmd, **kw: subprocess.CompletedProcess(cmd, 0, stdout="ok", stderr=""))
+    rc, _ = digest.run(vault)
+    assert rc == 0
+    assert "typed-by-hand" in (vault / "wiki" / "index.md").read_text(encoding="utf-8")
+
+
 def test_capture_hook_broken_event_is_silent(vault):
     import os
     r = subprocess.run([sys.executable, str(HOOK)], input="not json",

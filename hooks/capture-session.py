@@ -30,6 +30,11 @@ def _vault() -> Path | None:
 
 def main() -> int:
     try:
+        # The daily digest itself runs a headless `claude -p`, whose Stop hook
+        # lands here. Enqueuing it would make tomorrow's digest write a page
+        # about today's digest, forever. brain digest sets this marker.
+        if os.environ.get("BRAIN_DIGEST") == "1":
+            return 0
         event = json.load(sys.stdin)
         session_id = event.get("session_id")
         transcript = event.get("transcript_path")

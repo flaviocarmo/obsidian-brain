@@ -2,6 +2,14 @@
 
 All notable changes to this project are documented here. Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [SemVer](https://semver.org/).
 
+## [0.8.0] - 2026-08-13
+
+### Fixed
+- **The digest no longer digests itself.** `brain digest` runs a headless `claude -p`, whose Stop hook is the very hook that fills the queue, so every run enqueued its own session and the next day wrote a journal page about the previous day's digest — forever, one wasted LLM run per day. The child is now marked with `BRAIN_DIGEST=1` and the capture hook returns early when it sees it. Verified end to end: a headless run with the marker leaves the queue untouched.
+
+### Added
+- The daily run recompiles `wiki/index.md` after consolidating. The `PostToolUse` hook only fires for pages an agent writes with Write/Edit; anything typed straight into Obsidian left the index stale until someone remembered to run `brain compile-index`. No LLM involved in this step.
+
 ## [0.7.0] - 2026-08-10
 
 ### Fixed
