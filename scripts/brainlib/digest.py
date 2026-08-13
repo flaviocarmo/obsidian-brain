@@ -161,7 +161,7 @@ def files_written_outside_scope(vault: Path, before: dict[str, float]) -> list[s
     return sorted(out)
 
 
-def build_hot_prompt(vault: Path, pages: list[Path]) -> str:
+def build_hot_prompt(vault: Path, pages: list[Path], mental_models: list = ()) -> str:
     lines = [
         "Voce atualiza o wiki/hot.md do vault Obsidian (contexto quente lido no inicio",
         "de toda sessao). CONTRATO: no maximo 500 palavras, arquivo SOBRESCRITO por",
@@ -180,11 +180,33 @@ def build_hot_prompt(vault: Path, pages: list[Path]) -> str:
         "   derrubar fato velho ja resolvido a cortar pendencia viva.",
         "",
         "NAO toque em nenhum outro arquivo.",
-        "",
-        "Paginas de sessao escritas hoje:",
     ]
+    if mental_models:
+        # The hot cache and the mental models split by VOLATILITY, not by
+        # subject: what changes weekly (a contract's state, a cluster's shape)
+        # belongs in a model that is kept current and read on demand; the hot
+        # holds what changed in the last days and what needs a decision. Left
+        # unsaid, the rewrite copies the durable facts back in every night and
+        # spends the 500-word budget saying what is already written elsewhere.
+        lines += [
+            "",
+            "MENTAL MODELS ja respondem, por escrito e sempre atualizados, as perguntas",
+            "abaixo. NAO repita no hot o conteudo deles: quando um fato pertence a um",
+            "modelo, cite o wikilink e use as palavras economizadas para o que e recente",
+            "ou exige decisao. O hot guarda o VOLATIL; o modelo guarda o DURAVEL.",
+        ]
+        lines += [f"- [[{m.title}]] — {m.question}" for m in mental_models]
+    lines += ["", "Paginas de sessao escritas hoje:"]
     lines += [f"- {p}" for p in pages] or ["- (nenhuma; apenas envelheca o hot atual)"]
     return "\n".join(lines)
+
+
+def _mental_models(vault: Path) -> list:
+    try:
+        from . import models as models_mod
+        return models_mod.load(vault)
+    except (OSError, ValueError):
+        return []
 
 
 def refresh_hot(vault: Path, pages: list[Path], model: str = HOT_MODEL,
@@ -201,7 +223,8 @@ def refresh_hot(vault: Path, pages: list[Path], model: str = HOT_MODEL,
     before = hot.read_text(encoding="utf-8")
     try:
         proc = subprocess.run(
-            [claude_cmd, "-p", build_hot_prompt(vault, pages), "--model", model,
+            [claude_cmd, "-p", build_hot_prompt(vault, pages, _mental_models(vault)),
+             "--model", model,
              "--allowed-tools", "Read,Write,Edit,Glob"],
             capture_output=True, text=True, encoding="utf-8", errors="replace",
             timeout=HOT_TIMEOUT_SECONDS, env={**os.environ, SELF_MARKER_ENV: "1"},

@@ -259,3 +259,20 @@ def test_run_leaves_a_small_log_alone(vault, tmp_path, monkeypatch):
     rc, msg = digest.run(vault, skip_hot=True)
     assert rc == 0 and "dentro do teto" in msg
     assert (vault / "wiki/log.md").read_text(encoding="utf-8") == before
+
+
+def test_hot_prompt_tells_the_rewrite_not_to_duplicate_mental_models(vault):
+    """hot and models split by volatility: without saying so, the nightly
+    rewrite copies durable facts back in and spends the 500-word budget
+    repeating what is already written and kept current elsewhere."""
+    from brainlib import models as models_mod
+    models_mod.scaffold(vault, "Qual e o estado do contrato 071?")
+    prompt = digest.build_hot_prompt(vault, [], models_mod.load(vault))
+    assert "NAO repita no hot o conteudo deles" in prompt
+    assert "Qual e o estado do contrato 071?" in prompt
+    assert "VOLATIL" in prompt and "DURAVEL" in prompt
+
+
+def test_hot_prompt_without_models_is_unchanged(vault):
+    prompt = digest.build_hot_prompt(vault, [])
+    assert "MENTAL MODELS" not in prompt
