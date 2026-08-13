@@ -17,7 +17,7 @@ LLM-maintained knowledge bases fail in predictable ways: the hot-context file gr
 - **Contradiction detection.** Pages accrete, and two of them end up disagreeing about the same invoice or work order. The linter joins pages on strong identifiers and reports the pair when the *newer* page still says pending while an older one says issued. It never picks a winner: both sides are reported with their `updated` dates.
 - **Section extractor for big pages.** Real vaults grow 250 KB ledger pages. `brain extract` returns a token-estimated table of contents, then just the section you ask for, fence-aware (headings inside code blocks are not headings).
 - **Search stays external, and required.** basic-memory indexes the vault locally (FTS + vector, zero LLM tokens); this plugin implements what comes after search, not search itself. `brain doctor` fails loudly when it is missing, because silent degradation to grep is worse than an error.
-- **Everything deterministic is code with tests.** 126 pytest tests, Windows-native, cp1252-console safe, pure stdlib.
+- **Everything deterministic is code with tests.** 133 pytest tests, Windows-native, cp1252-console safe, pure stdlib.
 
 ### Requirements
 
@@ -108,7 +108,10 @@ A `Stop` hook enqueues every Claude Code session (zero LLM cost) into `.vault-me
 ```
 python <plugin>/scripts/brain.py digest --dry-run   # list what is pending
 python <plugin>/scripts/brain.py digest             # one headless claude run digests the batch
+python <plugin>/scripts/brain.py digest --skip-hot  # ... and leave hot.md alone
 ```
+
+After consolidating, the run rewrites `wiki/hot.md` from the pages it just wrote (a second, short call on a stronger model, since 500 words of hot context are curation, not summarising) and recompiles `wiki/index.md`. If the rewritten hot cache breaks the 500-word contract the previous version is restored and the run says so — the validation hook can report a bad write but cannot undo it. The superseded hot cache is appended to `wiki/folds/hot-cache-archive-<year>-Q<n>.md`.
 
 Schedule it (Windows example):
 
@@ -116,12 +119,12 @@ Schedule it (Windows example):
 schtasks /Create /F /SC DAILY /ST 22:00 /TN obsidian-brain-digest /TR "cmd /c python C:\path\to\repo\scripts\brain.py digest >> C:\path\to\vault\.vault-meta\digest.log 2>&1"
 ```
 
-The automatic path writes journal pages and a log entry only; contract ledgers, hot cache and index stay curated (manual `/save`).
+The automatic path writes journal pages, a log entry, the hot cache and the index; contract ledgers stay curated (manual `/save`).
 
 ### Development
 
 ```
-python -m pytest -v      # 126 tests, Windows-native
+python -m pytest -v      # 133 tests, Windows-native
 ```
 
 Design spec and implementation plan live in [`docs/superpowers/`](docs/superpowers/).
@@ -139,7 +142,7 @@ Bases de conhecimento mantidas por LLM falham de formas previsíveis: o arquivo 
 - **Detecção de contradições.** Páginas crescem por acréscimo e duas acabam discordando sobre a mesma NF ou OS. O linter junta páginas por identificadores fortes e reporta o par quando a página *mais recente* ainda diz pendente e uma mais antiga já diz emitida. Nunca escolhe vencedor: mostra os dois lados com as datas `updated`.
 - **Extrator de seção para páginas grandes.** Vault real cria páginas de ledger de 250 KB. `brain extract` devolve um sumário com estimativa de tokens por seção e depois só a seção pedida, ciente de code fences (heading dentro de bloco de código não é heading).
 - **Busca fica de fora, e é obrigatória.** O basic-memory indexa o vault localmente (FTS + vetorial, zero tokens de LLM); este plugin implementa o que vem depois da busca, não a busca. O `brain doctor` falha alto quando ele falta, porque degradar para grep em silêncio é pior que erro.
-- **Tudo que é determinístico é código com teste.** 126 testes pytest, Windows nativo, seguro em console cp1252, stdlib pura.
+- **Tudo que é determinístico é código com teste.** 133 testes pytest, Windows nativo, seguro em console cp1252, stdlib pura.
 
 ### Requisitos
 
@@ -196,14 +199,17 @@ Um hook `Stop` enfileira toda sessão do Claude Code (custo zero de LLM) em `.va
 ```
 python <plugin>/scripts/brain.py digest --dry-run   # lista o que está pendente
 python <plugin>/scripts/brain.py digest             # uma execução headless digere o lote
+python <plugin>/scripts/brain.py digest --skip-hot  # ... sem mexer no hot.md
 ```
 
-Agendamento (exemplo Windows): `schtasks /Create /SC DAILY /ST 22:00 ...` como na seção em inglês. O caminho automático escreve journal e log apenas; ledgers de contrato, hot cache e index continuam curadoria manual (`/save`).
+Depois de consolidar, a execução reescreve o `wiki/hot.md` a partir das páginas que acabou de escrever (segunda chamada, curta, em modelo mais forte: 500 palavras de contexto quente são curadoria, não resumo) e recompila o `wiki/index.md`. Se o hot reescrito estourar o contrato de 500 palavras, a versão anterior é restaurada e a execução avisa — o hook de validação denuncia a escrita ruim, mas não a desfaz. O hot substituído é anexado em `wiki/folds/hot-cache-archive-<ano>-Q<n>.md`.
+
+Agendamento (exemplo Windows): `schtasks /Create /SC DAILY /ST 22:00 ...` como na seção em inglês. O caminho automático escreve journal, log, hot cache e index; ledgers de contrato continuam curadoria manual (`/save`).
 
 ### Desenvolvimento
 
 ```
-python -m pytest -v      # 126 testes, Windows nativo
+python -m pytest -v      # 133 testes, Windows nativo
 ```
 
 Spec de design e plano de implementação em [`docs/superpowers/`](docs/superpowers/).

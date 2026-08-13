@@ -7,6 +7,8 @@ description: Atualizar o wiki/hot.md do vault (contexto quente, contrato de 500 
 
 Contrato: `wiki/hot.md` tem NO MÁXIMO 500 palavras e é SOBRESCRITO por inteiro. Nunca existe seção "anterior".
 
+O digest diário já reescreve o hot com as sessões do dia. Esta skill é o caminho manual: use quando o contexto mudou agora e não dá para esperar a execução da noite, ou para recurar o que o digest resumiu mal.
+
 1. Arquive a versão atual: append do conteúdo (sem frontmatter) em `wiki/folds/hot-cache-archive-<YYYY-Qn>.md` (crie com frontmatter `type: meta` se não existir).
 2. Reescreva `wiki/hot.md` inteiro: seções `## Last Updated` (parágrafo único do estado atual), `## Key Recent Facts` (fatos datados, 1 linha cada), `## Active Threads` (pendências vivas). Poder de síntese: o que saiu do hot continua acessível via busca.
 3. Confira: `python "${CLAUDE_PLUGIN_ROOT}/scripts/brain.py" hot-check` (exit 0 = dentro do contrato).

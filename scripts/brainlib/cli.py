@@ -34,6 +34,8 @@ def build_parser() -> argparse.ArgumentParser:
     dig = sub.add_parser("digest")
     dig.add_argument("--dry-run", action="store_true")
     dig.add_argument("--model", default=None)
+    dig.add_argument("--skip-hot", action="store_true",
+                     help="do not refresh wiki/hot.md after consolidating")
     return p
 
 
@@ -133,7 +135,7 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "digest":
             from . import digest as digest_mod
             vault = config.vault_path(args.vault)
-            return digest_mod.main_cli(vault, args.model, args.dry_run)
+            return digest_mod.main_cli(vault, args.model, args.dry_run, args.skip_hot)
     except (config.ConfigError, OSError) as e:
         print(f"brain: {e}", file=sys.stderr)
         return 2

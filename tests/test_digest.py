@@ -112,6 +112,68 @@ def test_run_recompiles_the_index(vault, tmp_path, monkeypatch):
     assert "typed-by-hand" in (vault / "wiki" / "index.md").read_text(encoding="utf-8")
 
 
+HOT_OK = ('---\ntype: meta\ntitle: "Hot Cache"\nupdated: 2026-08-13\n---\n\n'
+          "# Recent Context\n\n## Last Updated\n\nEstado de hoje.\n")
+
+
+def _write_hot(vault, text):
+    (vault / "wiki").mkdir(exist_ok=True)
+    hot = vault / "wiki" / "hot.md"
+    hot.write_text(text, encoding="utf-8")
+    return hot
+
+
+def test_refresh_hot_restores_previous_when_contract_breaks(vault, monkeypatch):
+    """500 words is the whole point of the file; an unattended rewrite that blows
+    past it must not survive, since the PostToolUse hook can only complain."""
+    hot = _write_hot(vault, HOT_OK)
+    before = hot.read_text(encoding="utf-8")
+
+    def fake_run(cmd, **kwargs):
+        hot.write_text(HOT_OK + ("palavra " * 600), encoding="utf-8")
+        return subprocess.CompletedProcess(cmd, 0, stdout="", stderr="")
+
+    monkeypatch.setattr(digest.subprocess, "run", fake_run)
+    msg = digest.refresh_hot(vault, [])
+    assert "restored" in msg
+    assert hot.read_text(encoding="utf-8") == before
+    assert not list((vault / "wiki" / "folds").glob("*.md"))  # nothing archived on rollback
+
+
+def test_refresh_hot_archives_the_superseded_version(vault, monkeypatch):
+    hot = _write_hot(vault, HOT_OK)
+
+    def fake_run(cmd, **kwargs):
+        assert kwargs.get("env", {}).get(digest.SELF_MARKER_ENV) == "1"
+        hot.write_text(HOT_OK.replace("Estado de hoje.", "Estado NOVO."), encoding="utf-8")
+        return subprocess.CompletedProcess(cmd, 0, stdout="", stderr="")
+
+    monkeypatch.setattr(digest.subprocess, "run", fake_run)
+    assert digest.refresh_hot(vault, []) == "hot: refreshed"
+    archives = list((vault / "wiki" / "folds").glob("hot-cache-archive-*.md"))
+    assert len(archives) == 1
+    assert "Estado de hoje." in archives[0].read_text(encoding="utf-8")
+
+
+def test_refresh_hot_keeps_previous_when_claude_fails(vault, monkeypatch):
+    hot = _write_hot(vault, HOT_OK)
+    monkeypatch.setattr(digest.subprocess, "run",
+                        lambda cmd, **kw: subprocess.CompletedProcess(cmd, 1, stdout="", stderr="boom"))
+    msg = digest.refresh_hot(vault, [])
+    assert "previous kept" in msg and hot.read_text(encoding="utf-8") == HOT_OK
+
+
+def test_run_can_skip_the_hot_phase(vault, tmp_path, monkeypatch):
+    t = tmp_path / "t.jsonl"
+    t.write_text("{}", encoding="utf-8")
+    _enqueue(vault, "s1", t)
+    _write_hot(vault, HOT_OK)
+    monkeypatch.setattr(digest.subprocess, "run",
+                        lambda cmd, **kw: subprocess.CompletedProcess(cmd, 0, stdout="ok", stderr=""))
+    rc, msg = digest.run(vault, skip_hot=True)
+    assert rc == 0 and "hot: skipped" in msg
+
+
 def test_capture_hook_broken_event_is_silent(vault):
     import os
     r = subprocess.run([sys.executable, str(HOOK)], input="not json",

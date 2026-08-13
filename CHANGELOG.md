@@ -9,6 +9,7 @@ All notable changes to this project are documented here. Format based on [Keep a
 
 ### Added
 - The daily run recompiles `wiki/index.md` after consolidating. The `PostToolUse` hook only fires for pages an agent writes with Write/Edit; anything typed straight into Obsidian left the index stale until someone remembered to run `brain compile-index`. No LLM involved in this step.
+- **The daily run also refreshes `wiki/hot.md`** from the pages it just wrote, in a second short call on `sonnet` — the hot cache is the file every session reads first, and choosing which 500 words survive is curation, not summarising. The rewrite is validated against the contract and **rolled back to the previous version if it breaks it**: the PostToolUse validator can report a bad write but never undoes it, which is fine when a human is watching and useless at 22:00. The superseded version is appended to `wiki/folds/hot-cache-archive-<year>-Q<n>.md`. `--skip-hot` opts out.
 
 ## [0.7.0] - 2026-08-10
 

@@ -11,10 +11,16 @@ import json
 import os
 import subprocess
 import sys
+import time
+from datetime import date
 from pathlib import Path
 
 DIGEST_TIMEOUT_SECONDS = 1800
+HOT_TIMEOUT_SECONDS = 600
 DEFAULT_MODEL = "haiku"
+# The hot cache is the file every session reads first: 500 words that have to
+# be the RIGHT 500. Summarising transcripts is mechanical, curating is not.
+HOT_MODEL = "sonnet"
 # Marks the headless child so its own Stop hook does not enqueue it: without
 # this the digest digests itself every single day.
 SELF_MARKER_ENV = "BRAIN_DIGEST"
@@ -104,14 +110,103 @@ def build_prompt(vault: Path, items: list[dict]) -> str:
     return "\n".join(lines)
 
 
+def journal_pages_touched_since(vault: Path, since: float) -> list[Path]:
+    journal = vault / "wiki" / "journal"
+    if not journal.is_dir():
+        return []
+    return sorted(p for p in journal.glob("*.md") if p.stat().st_mtime >= since)
+
+
+def build_hot_prompt(vault: Path, pages: list[Path]) -> str:
+    lines = [
+        "Voce atualiza o wiki/hot.md do vault Obsidian (contexto quente lido no inicio",
+        "de toda sessao). CONTRATO: no maximo 500 palavras, arquivo SOBRESCRITO por",
+        "inteiro. Nunca crie secao 'anterior' — o historico ja esta em wiki/log.md e",
+        "wiki/folds/.",
+        f"Vault: {vault}",
+        "",
+        "1. Leia wiki/hot.md (estado atual) e as paginas de sessao abaixo (o que mudou hoje).",
+        "2. Reescreva wiki/hot.md INTEIRO com as secoes, nesta ordem:",
+        "   '## Last Updated' (UM paragrafo: o fato dominante de hoje, com wikilink),",
+        "   '## Key Recent Facts' (fatos datados, uma linha cada, os que ainda decidem algo),",
+        "   '## Active Threads' (pendencias vivas).",
+        "3. Frontmatter: mantenha as chaves que ja existem (type: meta, title, permalink)",
+        "   e ponha 'updated' na data de hoje.",
+        "4. Poder de sintese: o que sair do hot continua acessivel por busca. Prefira",
+        "   derrubar fato velho ja resolvido a cortar pendencia viva.",
+        "",
+        "NAO toque em nenhum outro arquivo.",
+        "",
+        "Paginas de sessao escritas hoje:",
+    ]
+    lines += [f"- {p}" for p in pages] or ["- (nenhuma; apenas envelheca o hot atual)"]
+    return "\n".join(lines)
+
+
+def refresh_hot(vault: Path, pages: list[Path], model: str = HOT_MODEL,
+                claude_cmd: str = "claude") -> str:
+    """Rewrite hot.md from today's pages, or leave it exactly as it was.
+
+    The PostToolUse validator only *reports* a broken contract — it cannot undo
+    the write — so an unattended run has to be able to put the old file back.
+    """
+    from . import validate as validate_mod
+    hot = vault / "wiki" / "hot.md"
+    if not hot.is_file():
+        return "hot: no hot.md, skipped"
+    before = hot.read_text(encoding="utf-8")
+    try:
+        proc = subprocess.run(
+            [claude_cmd, "-p", build_hot_prompt(vault, pages), "--model", model,
+             "--allowed-tools", "Read,Write,Edit,Glob"],
+            capture_output=True, text=True, encoding="utf-8", errors="replace",
+            timeout=HOT_TIMEOUT_SECONDS, env={**os.environ, SELF_MARKER_ENV: "1"},
+        )
+    except (OSError, subprocess.TimeoutExpired) as e:
+        return f"hot: not refreshed ({e})"
+    after = hot.read_text(encoding="utf-8")
+    if proc.returncode != 0:
+        if after != before:
+            hot.write_text(before, encoding="utf-8")
+        return f"hot: claude exited {proc.returncode}, previous kept"
+    if after == before:
+        return "hot: unchanged"
+    errors = validate_mod.check_hot(after)
+    if errors:
+        hot.write_text(before, encoding="utf-8")
+        return f"hot: contract violated, previous restored ({errors[0]})"
+    archive_hot(vault, before)
+    return "hot: refreshed"
+
+
+def archive_hot(vault: Path, previous: str) -> Path:
+    """Append the superseded hot cache to the quarter's archive."""
+    from . import frontmatter
+    today = date.today()
+    dest = vault / "wiki" / "folds" / f"hot-cache-archive-{today.year}-Q{(today.month - 1) // 3 + 1}.md"
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    if not dest.exists():
+        dest.write_text(
+            "---\ntype: meta\n"
+            f'title: "Hot Cache Archive {today.year} Q{(today.month - 1) // 3 + 1}"\n'
+            f"created: {today.isoformat()}\nupdated: {today.isoformat()}\n"
+            "status: evergreen\n---\n\n# Hot Cache Archive\n",
+            encoding="utf-8")
+    _, body = frontmatter.split(previous)
+    with dest.open("a", encoding="utf-8") as f:
+        f.write(f"\n## Arquivado em {today.isoformat()}\n\n{body.strip()}\n")
+    return dest
+
+
 def run(vault: Path, model: str = DEFAULT_MODEL, dry_run: bool = False,
-        claude_cmd: str = "claude") -> tuple[int, str]:
+        claude_cmd: str = "claude", skip_hot: bool = False) -> tuple[int, str]:
     items = pending(vault)
     if not items:
         return 0, "digest: queue empty, nothing to do"
     if dry_run:
         listing = "\n".join(f"- {i['session_id']} ({i['transcript_path']})" for i in items)
         return 0, f"digest dry-run: {len(items)} session(s) pending\n{listing}"
+    started = time.time()
     proc = subprocess.run(
         [claude_cmd, "-p", build_prompt(vault, items), "--model", model,
          "--allowed-tools", "Read,Write,Edit,Grep,Glob"],
@@ -122,7 +217,11 @@ def run(vault: Path, model: str = DEFAULT_MODEL, dry_run: bool = False,
     if proc.returncode != 0:
         return 1, f"digest: claude exited {proc.returncode}: {proc.stderr.strip()[:400]}"
     mark_done(vault, items)
-    return 0, f"digest: {len(items)} session(s) digested\n{recompile_index(vault)}\n{proc.stdout.strip()[-600:]}"
+    hot_msg = ("hot: skipped" if skip_hot else
+               refresh_hot(vault, journal_pages_touched_since(vault, started),
+                           claude_cmd=claude_cmd))
+    return 0, (f"digest: {len(items)} session(s) digested\n{hot_msg}\n"
+               f"{recompile_index(vault)}\n{proc.stdout.strip()[-600:]}")
 
 
 def recompile_index(vault: Path) -> str:
@@ -136,9 +235,9 @@ def recompile_index(vault: Path) -> str:
         return f"index: recompile failed: {e}"
 
 
-def main_cli(vault: Path, model: str | None, dry_run: bool) -> int:
+def main_cli(vault: Path, model: str | None, dry_run: bool, skip_hot: bool = False) -> int:
     try:
-        rc, msg = run(vault, model=model or DEFAULT_MODEL, dry_run=dry_run)
+        rc, msg = run(vault, model=model or DEFAULT_MODEL, dry_run=dry_run, skip_hot=skip_hot)
     except (OSError, subprocess.TimeoutExpired) as e:
         print(f"digest: {e}", file=sys.stderr)
         return 1
