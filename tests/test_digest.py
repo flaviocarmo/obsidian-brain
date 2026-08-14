@@ -276,3 +276,32 @@ def test_hot_prompt_tells_the_rewrite_not_to_duplicate_mental_models(vault):
 def test_hot_prompt_without_models_is_unchanged(vault):
     prompt = digest.build_hot_prompt(vault, [])
     assert "MENTAL MODELS" not in prompt
+
+
+def test_run_reports_every_phase(vault, tmp_path, monkeypatch):
+    """The model refresh was wired into the module and never called: the run
+    said nothing about models, and nobody noticed for a night. Assert the
+    phases the run must account for."""
+    t = tmp_path / "t.jsonl"
+    t.write_text("{}", encoding="utf-8")
+    _enqueue(vault, "s1", t)
+    monkeypatch.setattr(digest.subprocess, "run",
+                        lambda cmd, **kw: subprocess.CompletedProcess(cmd, 0, stdout="ok", stderr=""))
+    monkeypatch.setattr(digest, "refresh_hot", lambda *a, **k: "hot: refreshed")
+    monkeypatch.setattr(digest, "refresh_models", lambda *a: "models: nada a atualizar")
+    rc, msg = digest.run(vault)
+    assert rc == 0
+    for phase in ("digest:", "hot:", "models:", "log:", "index.md compiled"):
+        assert phase in msg, f"fase ausente do relatorio: {phase}"
+
+
+def test_index_recompiled_by_the_hook_is_not_a_scope_violation(vault, tmp_path, monkeypatch):
+    """The recompile hook rewrites index.md because the digest wrote a page;
+    reporting that trains the reader to ignore the warning."""
+    t = tmp_path / "t.jsonl"
+    t.write_text("{}", encoding="utf-8")
+    _enqueue(vault, "s1", t)
+    (vault / "wiki" / "journal").mkdir(parents=True, exist_ok=True)
+    before = digest.snapshot_files(vault)
+    (vault / "wiki" / "index.md").write_text("recompilado pelo hook", encoding="utf-8")
+    assert digest.files_written_outside_scope(vault, before) == []

@@ -157,6 +157,12 @@ def files_written_outside_scope(vault: Path, before: dict[str, float]) -> list[s
         parts = rel.split("/")
         if rel == "wiki/log.md" or parts[:2] == ["wiki", "journal"]:
             continue
+        # index.md is rewritten by the recompile hook whenever a page is
+        # written, so it changes *because* the digest did its job. Reporting it
+        # trains the reader to ignore this warning, which is the one warning
+        # that must stay believable.
+        if rel == "wiki/index.md":
+            continue
         out.append(rel)
     return sorted(out)
 
@@ -290,7 +296,8 @@ def run(vault: Path, model: str = DEFAULT_MODEL, dry_run: bool = False,
     hot_msg = ("hot: skipped" if skip_hot else
                refresh_hot(vault, journal_pages_touched_since(vault, started),
                            claude_cmd=claude_cmd))
-    return 0, (f"digest: {len(items)} session(s) digested{stray_msg}\n{hot_msg}\n"
+    model_msg = "models: skipped" if skip_hot else refresh_models(vault)
+    return 0, (f"digest: {len(items)} session(s) digested{stray_msg}\n{hot_msg}\n{model_msg}\n"
                f"{fold_log_if_needed(vault)}\n{recompile_index(vault)}\n"
                f"{proc.stdout.strip()[-600:]}")
 
